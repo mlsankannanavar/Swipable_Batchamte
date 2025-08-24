@@ -1,0 +1,140 @@
+name: Build and Release APK
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'zulu'
+        java-version: '17'
+        
+    - name: Cache Gradle
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+        restore-keys: |
+          ${{ runner.os }}-gradle-
+          
+    - name: Cache pub dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.pub-cache
+          /home/runner/.pub-cache
+        key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-pub-
+        
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.24.0'
+        channel: 'stable'
+        cache: true
+        
+    - name: Disable Flutter analytics
+      run: flutter config --no-analytics
+        
+    - name: Accept Android licenses
+      run: yes | flutter doctor --android-licenses
+      continue-on-error: true
+        
+    - name: Get Flutter dependencies
+      run: flutter pub get
+      
+    - name: Run Flutter analyze
+      run: flutter analyze --no-fatal-infos
+      continue-on-error: true
+      
+    - name: Run Flutter test
+      run: flutter test --no-pub
+      continue-on-error: true
+      
+    - name: Build APK (Debug)
+      run: flutter build apk --debug
+      
+    - name: Build APK (Release)
+      run: flutter build apk --release
+      
+    - name: Build App Bundle (Release)
+      run: flutter build appbundle --release
+      
+    - name: Create release folder
+      run: |
+        mkdir -p release-artifacts
+        cp build/app/outputs/flutter-apk/app-debug.apk release-artifacts/batchmate-debug.apk
+        cp build/app/outputs/flutter-apk/app-release.apk release-artifacts/batchmate-release.apk
+        cp build/app/outputs/bundle/release/app-release.aab release-artifacts/batchmate-release.aab
+        
+    - name: Upload Debug APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: batchmate-debug-apk
+        path: release-artifacts/batchmate-debug.apk
+        
+    - name: Upload Release APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: batchmate-release-apk
+        path: release-artifacts/batchmate-release.apk
+        
+    - name: Upload App Bundle
+      uses: actions/upload-artifact@v4
+      with:
+        name: batchmate-app-bundle
+        path: release-artifacts/batchmate-release.aab
+        
+    - name: Create Release
+      if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: v1.0.0-${{ github.run_number }}
+        name: BatchMate Release v1.0.0-${{ github.run_number }}
+        body: |
+          ## BatchMate Release v1.0.0-${{ github.run_number }}
+          
+          ### Features
+          - 📱 Complete pharmaceutical batch scanning application
+          - 📊 Comprehensive logging system with real-time updates
+          - 📷 QR code scanning with mobile_scanner
+          - 📝 OCR text recognition with ML Kit
+          - 🔄 API integration with detailed request/response logging
+          - ⚙️ Advanced settings and configuration
+          - 💾 Local data storage with Hive
+          
+          ### Downloads
+          - **batchmate-release.apk**: Production ready APK for installation
+          - **batchmate-debug.apk**: Debug version for development
+          - **batchmate-release.aab**: App Bundle for Google Play Store
+          
+          ### Installation
+          1. Download the `batchmate-release.apk` file
+          2. Enable "Install from unknown sources" in Android settings
+          3. Install the APK file
+          
+          Built on: ${{ github.event.head_commit.timestamp }}
+          Commit: ${{ github.sha }}
+        files: |
+          release-artifacts/batchmate-debug.apk
+          release-artifacts/batchmate-release.apk
+          release-artifacts/batchmate-release.aab
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

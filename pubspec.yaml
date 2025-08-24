@@ -1,0 +1,83 @@
+name: batchmate
+description: Pharmaceutical batch scanning and management app with comprehensive logging
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+  flutter: ">=3.10.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # Core dependencies
+  provider: ^6.1.2
+  hive_flutter: ^1.1.0
+  http: ^1.2.1
+  connectivity_plus: ^6.0.5
+  permission_handler: ^11.3.1
+  path_provider: ^2.1.4
+  share_plus: ^10.0.2
+  
+  # QR and Camera
+  mobile_scanner: ^5.2.3
+  camera: ^0.11.0+2
+  
+  # OCR/Text Recognition - Updated to compatible version
+  google_mlkit_text_recognition: ^0.13.1
+  
+  # Other dependencies
+  uuid: ^4.5.1
+  intl: ^0.19.0
+  logger: ^2.4.0
+  shimmer: ^3.0.0
+  
+  # UI Components
+  cupertino_icons: ^1.0.6
+  fluttertoast: ^8.2.4
+  
+  # Local Storage & Preferences
+  shared_preferences: ^2.2.2
+  hive: ^2.2.3
+  
+  # Utilities
+  file_picker: ^6.1.1
+  device_info_plus: ^9.1.1
+  
+  # HTTP & API (keeping dio for advanced features)
+  dio: ^5.4.0
+  
+  # UI & State Management (keeping riverpod for advanced state)
+  flutter_riverpod: ^2.4.9
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.1
+  hive_generator: ^2.0.1
+  build_runner: ^2.4.7
+  flutter_launcher_icons: ^0.13.1
+
+dependency_overrides:
+  google_mlkit_commons: ^0.7.1
+
+flutter:
+  uses-material-design: true
+  
+  assets:
+    - assets/logo/
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "logo/icon.png"
+  min_sdk_android: 21 # android min sdk min:16, default 21
+  web:
+    generate: true
+    image_path: "logo/icon.png"
+    background_color: "#hexcode"
+    theme_color: "#hexcode"
+  windows:
+    generate: true
+    image_path: "logo/icon.png"
+    icon_size: 48 # min:48, max:256, default: 48
