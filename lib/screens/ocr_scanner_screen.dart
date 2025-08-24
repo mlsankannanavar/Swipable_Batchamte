@@ -147,10 +147,11 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
       final batchMatches = <BatchMatch>[];
       for (int i = 0; i < matchResults.length; i++) {
         final result = matchResults[i];
+        final batch = result['batch']; // Access the nested batch object
         batchMatches.add(BatchMatch(
-          batchNumber: result['batchNumber'] ?? '',
-          itemName: result['itemName'] ?? '',
-          expiryDate: result['expiryDate'] ?? '',
+          batchNumber: batch?.batchNumber ?? batch?.batchId ?? '',
+          itemName: batch?.itemName ?? batch?.productName ?? '',
+          expiryDate: batch?.expiryDate ?? '',
           confidence: (result['confidence'] ?? 0.0).toDouble(),
           requestedQuantity: result['requestedQuantity'] ?? 0,
           rank: i + 1,
