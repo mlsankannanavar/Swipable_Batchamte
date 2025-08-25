@@ -47,94 +47,166 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.8,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      child: Column(
-        children: [
-          // Header with current position indicator
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-            decoration: BoxDecoration(
-              color: Colors.grey[50],
-              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Match ${_currentIndex + 1} of ${widget.matches.length}',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                IconButton(
-                  onPressed: widget.onClose,
-                  icon: Icon(Icons.close, color: AppColors.textSecondary, size: 28),
-                ),
-              ],
-            ),
-          ),
-          
-          // Swipeable cards
-          Expanded(
-            child: PageView.builder(
-              controller: _pageController,
-              scrollDirection: Axis.vertical,
-              onPageChanged: (index) {
-                setState(() {
-                  _currentIndex = index;
-                });
-              },
-              itemCount: widget.matches.length,
-              itemBuilder: (context, index) {
-                return _buildMatchCard(widget.matches[index], index);
-              },
-            ),
-          ),
-          
-          // Swipe instruction and page indicators
-          Container(
-            padding: EdgeInsets.all(16),
-            child: Column(
-              children: [
-                // Page indicators
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(
-                    widget.matches.length,
-                    (index) => Container(
-                      margin: EdgeInsets.symmetric(horizontal: 4),
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: index == _currentIndex 
-                          ? AppColors.primary 
-                          : Colors.grey[300],
-                      ),
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      resizeToAvoidBottomInset: true, // This will resize when keyboard appears
+      body: Container(
+        height: MediaQuery.of(context).size.height * 0.8,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          children: [
+            // Header with current position indicator
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+              decoration: BoxDecoration(
+                color: Colors.grey[50],
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Match ${_currentIndex + 1} of ${widget.matches.length}',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
                     ),
                   ),
-                ),
-                SizedBox(height: 8),
-                Text(
-                  _currentIndex < widget.matches.length - 1 
-                    ? 'Swipe up for next match' 
-                    : 'Last match',
-                  style: TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 14,
+                  IconButton(
+                    onPressed: widget.onClose,
+                    icon: Icon(Icons.close, color: AppColors.textSecondary, size: 28),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+            
+            // Swipeable cards
+            Expanded(
+              child: PageView.builder(
+                controller: _pageController,
+                scrollDirection: Axis.horizontal, // Changed to horizontal for better UX
+                onPageChanged: (index) {
+                  setState(() {
+                    _currentIndex = index;
+                  });
+                },
+                itemCount: widget.matches.length,
+                itemBuilder: (context, index) {
+                  return _buildMatchCard(widget.matches[index], index);
+                },
+              ),
+            ),
+            
+            // Swipe instruction and page indicators
+            Container(
+              padding: EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  // Navigation buttons
+                  if (widget.matches.length > 1) ...[
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        // Previous button
+                        IconButton(
+                          onPressed: _currentIndex > 0 
+                            ? () {
+                                _pageController.previousPage(
+                                  duration: Duration(milliseconds: 300),
+                                  curve: Curves.easeInOut,
+                                );
+                              }
+                            : null,
+                          icon: Icon(
+                            Icons.chevron_left,
+                            size: 30,
+                            color: _currentIndex > 0 
+                              ? AppColors.primary 
+                              : Colors.grey[400],
+                          ),
+                        ),
+                        
+                        // Page indicators
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: List.generate(
+                            widget.matches.length,
+                            (index) => Container(
+                              margin: EdgeInsets.symmetric(horizontal: 4),
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: index == _currentIndex 
+                                  ? AppColors.primary 
+                                  : Colors.grey[300],
+                              ),
+                            ),
+                          ),
+                        ),
+                        
+                        // Next button
+                        IconButton(
+                          onPressed: _currentIndex < widget.matches.length - 1
+                            ? () {
+                                _pageController.nextPage(
+                                  duration: Duration(milliseconds: 300),
+                                  curve: Curves.easeInOut,
+                                );
+                              }
+                            : null,
+                          icon: Icon(
+                            Icons.chevron_right,
+                            size: 30,
+                            color: _currentIndex < widget.matches.length - 1
+                              ? AppColors.primary 
+                              : Colors.grey[400],
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 8),
+                  ] else ...[
+                    // Page indicators for single match
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(
+                        widget.matches.length,
+                        (index) => Container(
+                          margin: EdgeInsets.symmetric(horizontal: 4),
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: index == _currentIndex 
+                              ? AppColors.primary 
+                              : Colors.grey[300],
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                  ],
+                  Text(
+                    widget.matches.length > 1 
+                      ? (_currentIndex < widget.matches.length - 1 
+                        ? 'Swipe left/right for more matches' 
+                        : 'Last match')
+                      : 'Single match found',
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -142,199 +214,224 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
   Widget _buildMatchCard(BatchMatch match, int index) {
     final quantityController = _quantityControllers[index]!;
     
-    return SingleChildScrollView(
-      padding: EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Rank indicator
-          Row(
-            children: [
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: _getRankColor(match.rank),
-                  borderRadius: BorderRadius.circular(25),
-                ),
-                child: Text(
-                  'Rank: ${match.rankDisplay}',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              Spacer(),
-              // Confidence badge
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: _getConfidenceColor(match.confidence),
-                  borderRadius: BorderRadius.circular(15),
-                ),
-                child: Text(
-                  '${match.confidence.toStringAsFixed(1)}%',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          
-          SizedBox(height: 24),
-          
-          // Match information card
-          Container(
-            padding: EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.grey[50],
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey[200]!),
-            ),
-            child: Column(
-              children: [
-                _buildInfoRow('Item Name:', match.itemName, isImportant: true),
-                _buildInfoRow('Batch Number:', match.batchNumber, isImportant: true),
-                _buildInfoRow('Expiry Date:', match.expiryDate, isImportant: true),
-                _buildInfoRow('Requested Qty:', '${match.requestedQuantity}'),
-                
-                // Order information section
-                if (match.purchaseOrderNumber != null || match.saleOrderNumber != null) ...[
-                  SizedBox(height: 12),
-                  Divider(color: Colors.grey[300]),
-                  SizedBox(height: 12),
-                  Text(
-                    'Order Information',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  SizedBox(height: 12),
-                  if (match.purchaseOrderNumber != null)
-                    _buildInfoRow('Purchase Order:', match.purchaseOrderNumber!),
-                  if (match.saleOrderNumber != null)
-                    _buildInfoRow('Sale Order:', match.saleOrderNumber!),
-                ],
-              ],
-            ),
-          ),
-          
-          SizedBox(height: 24),
-          
-          // Quantity input section
-          Container(
-            padding: EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.blue[50],
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.blue[200]!),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          padding: EdgeInsets.all(20),
+          physics: ClampingScrollPhysics(), // Better scroll behavior
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: constraints.maxHeight - 40, // Account for padding
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Enter Quantity to Submit:',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
+                // Rank indicator
+                Row(
+                  children: [
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: _getRankColor(match.rank),
+                        borderRadius: BorderRadius.circular(25),
+                      ),
+                      child: Text(
+                        'Rank: ${match.rankDisplay}',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    Spacer(),
+                    // Confidence badge
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: _getConfidenceColor(match.confidence),
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                      child: Text(
+                        '${match.confidence.toStringAsFixed(1)}%',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                
+                SizedBox(height: 24),
+                
+                // Match information card
+                Container(
+                  padding: EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey[200]!),
+                  ),
+                  child: Column(
+                    children: [
+                      _buildInfoRow('Item Name:', match.itemName, isImportant: true),
+                      _buildInfoRow('Batch Number:', match.batchNumber, isImportant: true),
+                      _buildInfoRow('Expiry Date:', match.expiryDate, isImportant: true),
+                      _buildInfoRow('Requested Qty:', '${match.requestedQuantity}'),
+                      
+                      // Order information section
+                      if (match.purchaseOrderNumber != null || match.saleOrderNumber != null) ...[
+                        SizedBox(height: 12),
+                        Divider(color: Colors.grey[300]),
+                        SizedBox(height: 12),
+                        Text(
+                          'Order Information',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        SizedBox(height: 12),
+                        if (match.purchaseOrderNumber != null)
+                          _buildInfoRow('Purchase Order:', match.purchaseOrderNumber!),
+                        if (match.saleOrderNumber != null)
+                          _buildInfoRow('Sale Order:', match.saleOrderNumber!),
+                      ],
+                    ],
                   ),
                 ),
-                SizedBox(height: 12),
-                TextField(
-                  controller: quantityController,
-                  keyboardType: TextInputType.number,
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
+                
+                SizedBox(height: 24),
+                
+                // Quantity input section
+                Container(
+                  padding: EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.blue[50],
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.blue[200]!),
                   ),
-                  decoration: InputDecoration(
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: Colors.blue[300]!),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: AppColors.primary, width: 2),
-                    ),
-                    hintText: 'Enter quantity',
-                    prefixIcon: Icon(
-                      Icons.inventory_2_outlined, 
-                      color: AppColors.primary,
-                    ),
-                    suffixText: 'units',
-                    suffixStyle: TextStyle(
-                      color: AppColors.textSecondary,
-                      fontWeight: FontWeight.w500,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Enter Quantity to Submit:',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      SizedBox(height: 12),
+                      TextField(
+                        controller: quantityController,
+                        keyboardType: TextInputType.number,
+                        autofocus: false, // Prevent automatic focus to avoid immediate keyboard popup
+                        scrollPadding: EdgeInsets.only(bottom: 200), // Add scroll padding for keyboard
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        decoration: InputDecoration(
+                          filled: true,
+                          fillColor: Colors.white,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: BorderSide(color: Colors.blue[300]!),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: BorderSide(color: AppColors.primary, width: 2),
+                          ),
+                          hintText: 'Enter quantity',
+                          prefixIcon: Icon(
+                            Icons.inventory_2_outlined, 
+                            color: AppColors.primary,
+                          ),
+                          suffixText: 'units',
+                          suffixStyle: TextStyle(
+                            color: AppColors.textSecondary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        onTap: () {
+                          // Ensure the text field is scrolled into view when tapped
+                          Future.delayed(Duration(milliseconds: 300), () {
+                            Scrollable.ensureVisible(
+                              context,
+                              duration: Duration(milliseconds: 300),
+                              curve: Curves.easeInOut,
+                            );
+                          });
+                        },
+                      ),
+                    ],
                   ),
                 ),
+                
+                SizedBox(height: 24),
+                
+                // Action buttons
+                Row(
+                  children: [
+                    Expanded(
+                      flex: 2,
+                      child: ElevatedButton.icon(
+                        onPressed: () => _handleSubmit(match, quantityController),
+                        icon: Icon(Icons.check_circle_outline, color: Colors.white),
+                        label: Text(
+                          'Submit',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          padding: EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          elevation: 2,
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: widget.onRetake,
+                        icon: Icon(Icons.camera_alt_outlined, color: AppColors.primary),
+                        label: Text(
+                          'Retake',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          padding: EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          side: BorderSide(color: AppColors.primary, width: 2),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                
+                // Add some bottom padding to ensure content is not cut off by keyboard
+                SizedBox(height: 60),
               ],
             ),
           ),
-          
-          SizedBox(height: 24),
-          
-          // Action buttons
-          Row(
-            children: [
-              Expanded(
-                flex: 2,
-                child: ElevatedButton.icon(
-                  onPressed: () => _handleSubmit(match, quantityController),
-                  icon: Icon(Icons.check_circle_outline, color: Colors.white),
-                  label: Text(
-                    'Submit',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    padding: EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    elevation: 2,
-                  ),
-                ),
-              ),
-              SizedBox(width: 12),
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: widget.onRetake,
-                  icon: Icon(Icons.camera_alt_outlined, color: AppColors.primary),
-                  label: Text(
-                    'Retake',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    padding: EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    side: BorderSide(color: AppColors.primary, width: 2),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 

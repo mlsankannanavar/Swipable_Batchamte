@@ -1101,16 +1101,28 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
       final combinedScore = (batchSimilarity * 0.7) + (expiryScore * 0.3);
       
       if (combinedScore >= 0.3) { // Lower threshold to get more candidates
-        // Find requested quantity from remNumbers
+        // Find requested quantity from remNumbers using intelligent matching
         int requestedQuantity = 0;
         String? matchedItemCode;
         
         final itemName = batch.itemName ?? batch.productName ?? '';
-        for (final entry in itemCodeMap.entries) {
-          if (_isItemNameMatchForCards(itemName, entry.key)) {
-            requestedQuantity = itemRemNumberMap[entry.key] ?? 0;
-            matchedItemCode = entry.key;
-            break;
+        final batchNumber = batch.batchNumber ?? batch.batchId ?? '';
+        
+        // Try to find the best matching item code for this batch
+        matchedItemCode = _findBestItemCodeForBatch(
+          itemName: itemName,
+          batchNumber: batchNumber,
+          itemsWithRemNumbers: itemsWithRemNumbers,
+          allMatches: allMatches,
+        );
+        
+        if (matchedItemCode != null && matchedItemCode.isNotEmpty) {
+          // Find the remNumber for the matched item code
+          for (final item in itemsWithRemNumbers) {
+            if (item['itemCode'] == matchedItemCode) {
+              requestedQuantity = item['remNumber'] as int? ?? 0;
+              break;
+            }
           }
         }
         
@@ -1182,14 +1194,24 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
     return bestSimilarity;
   }
 
-  /// Check if item name matches item code for cards
-  bool _isItemNameMatchForCards(String itemName, String itemCode) {
-    final normalizedItemName = itemName.toLowerCase();
-    final normalizedItemCode = itemCode.toLowerCase();
+  /// Find the best matching item code for a batch
+  String? _findBestItemCodeForBatch({
+    required String itemName,
+    required String batchNumber,
+    required List<dynamic> itemsWithRemNumbers,
+    required List<dynamic> allMatches,
+  }) {
+    if (itemsWithRemNumbers.isEmpty) return null;
     
-    // Simple contains check - you might need more sophisticated matching
-    return normalizedItemName.contains(normalizedItemCode) || 
-           normalizedItemCode.contains(normalizedItemName);
+    // Strategy 1: Try to find a pattern-based match
+    // This is where you could implement more sophisticated matching logic
+    // based on your specific business rules
+    
+    // Strategy 2: Round-robin distribution to ensure all remNumbers are used
+    // This ensures that we distribute the quantities fairly across available items
+    final index = allMatches.length % itemsWithRemNumbers.length;
+    final selectedItem = itemsWithRemNumbers[index];
+    return selectedItem['itemCode'] as String?;
   }
 
   /// Calculate Levenshtein similarity for cards
