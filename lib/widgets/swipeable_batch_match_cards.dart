@@ -52,19 +52,24 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
       minChildSize: 0.5,
       maxChildSize: 0.95,
       builder: (context, scrollController) {
-        return Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 10,
-                offset: Offset(0, -5),
-              ),
-            ],
+        return AnimatedPadding(
+          duration: Duration(milliseconds: 300),
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
           ),
-          child: Column(
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 10,
+                  offset: Offset(0, -5),
+                ),
+              ],
+            ),
+            child: Column(
           children: [
             // Drag handle
             Container(
@@ -228,6 +233,7 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
             ),
           ],
         ),
+        ),
         );
       },
     );
@@ -352,7 +358,6 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
                         controller: quantityController,
                         keyboardType: TextInputType.number,
                         autofocus: false,
-                        scrollPadding: EdgeInsets.only(bottom: 200),
                         style: TextStyle(
                           fontSize: 16, // Reduced from 18
                           fontWeight: FontWeight.w600,
@@ -380,15 +385,6 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
                           ),
                           contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 12), // Reduced padding
                         ),
-                        onTap: () {
-                          Future.delayed(Duration(milliseconds: 300), () {
-                            Scrollable.ensureVisible(
-                              context,
-                              duration: Duration(milliseconds: 300),
-                              curve: Curves.easeInOut,
-                            );
-                          });
-                        },
                       ),
                     ],
                   ),
