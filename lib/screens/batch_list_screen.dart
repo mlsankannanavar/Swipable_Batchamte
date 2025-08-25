@@ -55,7 +55,12 @@ class _BatchListScreenState extends State<BatchListScreen>
       final batchProvider = Provider.of<BatchProvider>(context, listen: false);
       
       loggingProvider.logApp('Batch list screen initialized');
-      batchProvider.loadBatchHistory();
+      
+      // Load current session batches for Available Batches tab
+      // Don't reload if we already have batches for the current session
+      if (batchProvider.batches.isEmpty) {
+        batchProvider.loadBatchesForCurrentSession();
+      }
     });
   }
 
@@ -210,7 +215,10 @@ class _BatchListScreenState extends State<BatchListScreen>
           return CustomErrorWidget(
             title: 'Error Loading Batches',
             message: batchProvider.errorMessage!,
-            onRetry: () => batchProvider.loadBatchesForCurrentSession(),
+            onRetry: () {
+              // Try to reload current session batches
+              batchProvider.loadBatchesForCurrentSession();
+            },
           );
         }
 
@@ -221,7 +229,10 @@ class _BatchListScreenState extends State<BatchListScreen>
         }
 
         return RefreshIndicator(
-          onRefresh: () => batchProvider.loadBatchesForCurrentSession(),
+          onRefresh: () async {
+            // Refresh current session batches
+            await batchProvider.loadBatchesForCurrentSession();
+          },
           child: _isGridView
               ? _buildGridView(availableBatches)
               : _buildListView(availableBatches),
