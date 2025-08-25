@@ -120,10 +120,44 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
     final batchProvider = Provider.of<BatchProvider>(context, listen: false);
     final loggingProvider = Provider.of<LoggingProvider>(context, listen: false);
     
+    // Show modal with loading state first
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      enableDrag: true,
+      isDismissible: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.8,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: const Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text(
+              'Analyzing batch matches...',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            ),
+          ],
+        ),
+      ),
+    );
+    
     try {
+      // Add small delay to ensure modal is shown
+      await Future.delayed(const Duration(milliseconds: 300));
+      
       // Get cached batches
       final batches = batchProvider.batches;
       if (batches.isEmpty) {
+        Navigator.pop(context); // Close loading modal
         _showSimpleErrorDialog('No batches available', 'Please scan QR code first to load batch data.');
         return;
       }
@@ -139,6 +173,7 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
       );
 
       if (matchResults.isEmpty) {
+        Navigator.pop(context); // Close loading modal
         _showSimpleErrorDialog('No matches found', 'No batch matches found for the scanned text.');
         return;
       }
@@ -161,11 +196,19 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
         ));
       }
 
+      // Close loading modal and show actual swipeable cards
+      Navigator.pop(context);
+      
       // Show swipeable cards in modal bottom sheet
       await showModalBottomSheet(
         context: context,
         isScrollControlled: true,
         backgroundColor: Colors.transparent,
+        enableDrag: true,
+        isDismissible: true,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
         builder: (context) => SwipeableBatchMatchCards(
           matches: batchMatches,
           onSubmit: (batchMatch, quantity) async {
@@ -183,6 +226,7 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
       );
 
     } catch (e) {
+      Navigator.pop(context); // Close loading modal if there's an error
       loggingProvider.logError('Error showing batch match cards: $e');
       _showSimpleErrorDialog('Error', 'Failed to process batch matches: ${e.toString()}');
     }
@@ -1041,16 +1085,23 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
       
       loggingProvider.logSuccess('OCR processing completed, showing swipeable batch matches');
       
-      // Show swipeable batch match cards instead of traditional dialogs
+      // Complete processing state before showing popup
+      setState(() {
+        _isProcessing = false;
+      });
+      
+      // Wait a brief moment to ensure UI updates
+      await Future.delayed(const Duration(milliseconds: 100));
+      
+      // Show swipeable batch match cards after processing is complete
       await _showSwipeableBatchMatchCards(extractedText);
 
     } catch (e) {
       loggingProvider.logError('Image capture and processing failed: $e');
-      _showInfoDialog('Failed to process image: ${e.toString()}');
-    } finally {
       setState(() {
         _isProcessing = false;
       });
+      _showInfoDialog('Failed to process image: ${e.toString()}');
     }
   }
 

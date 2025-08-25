@@ -47,17 +47,38 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      resizeToAvoidBottomInset: true, // This will resize when keyboard appears
-      body: Container(
-        height: MediaQuery.of(context).size.height * 0.8,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
+    return DraggableScrollableSheet(
+      initialChildSize: 0.8,
+      minChildSize: 0.5,
+      maxChildSize: 0.95,
+      builder: (context, scrollController) {
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 10,
+                offset: Offset(0, -5),
+              ),
+            ],
+          ),
         child: Column(
           children: [
+            // Drag handle
+            Container(
+              padding: EdgeInsets.only(top: 8),
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[400],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            
             // Header with current position indicator
             Container(
               padding: EdgeInsets.symmetric(horizontal: 20, vertical: 15),
@@ -190,24 +211,24 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
                       ),
                     ),
                     SizedBox(height: 8),
-                  ],
-                  Text(
-                    widget.matches.length > 1 
-                      ? (_currentIndex < widget.matches.length - 1 
-                        ? 'Swipe left/right for more matches' 
-                        : 'Last match')
-                      : 'Single match found',
-                    style: TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 14,
+                    Text(
+                      widget.matches.length > 1 
+                        ? (_currentIndex < widget.matches.length - 1 
+                          ? 'Swipe left/right for more matches' 
+                          : 'Last match')
+                        : 'Single match found',
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 14,
+                      ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),
           ],
-        ),
-      ),
+        );
+      },
     );
   }
 
