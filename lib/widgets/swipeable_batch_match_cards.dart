@@ -64,7 +64,7 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
               ),
             ],
           ),
-        child: Column(
+          child: Column(
           children: [
             // Drag handle
             Container(
@@ -227,6 +227,7 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
               ),
             ),
           ],
+        ),
         );
       },
     );
