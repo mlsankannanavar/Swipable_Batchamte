@@ -1,10 +1,13 @@
 import 'dart:io';
 import 'dart:math';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:camera/camera.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:intl/intl.dart';
+import 'package:image/image.dart' as img;
 
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
@@ -232,25 +235,33 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
       final XFile imageFile = await _cameraController!.takePicture();
       final File image = File(imageFile.path);
       
-      // Read image bytes for storage
+      // Read and crop image to focus area only
       final imageBytes = await image.readAsBytes();
+      final croppedImageBytes = await _cropImageToFocusArea(imageBytes);
+      
+      // Create cropped image file
+      final croppedImagePath = imageFile.path.replaceAll('.jpg', '_cropped.jpg');
+      final croppedImageFile = File(croppedImagePath);
+      await croppedImageFile.writeAsBytes(croppedImageBytes);
 
       // Log image details
-      final imageStats = await image.stat();
-      _logger.logOcr('Image captured successfully',
+      final imageStats = await croppedImageFile.stat();
+      _logger.logOcr('Image captured and cropped to focus area',
           success: true,
           extractedText: null,
           confidence: null);
       
       _logger.logApp('Image capture details',
           data: {
-            'filePath': imageFile.path,
-            'fileSize': Helpers.formatFileSize(imageStats.size),
-            'sizeBytes': imageStats.size,
+            'originalPath': imageFile.path,
+            'croppedPath': croppedImagePath,
+            'originalSize': Helpers.formatFileSize((await image.stat()).size),
+            'croppedSize': Helpers.formatFileSize(imageStats.size),
+            'croppedSizeBytes': imageStats.size,
           });
 
-      // Process image for text recognition
-      final extractedText = await _processImageForText(image);
+      // Process cropped image for text recognition
+      final extractedText = await _processImageForText(croppedImageFile);
       
       if (extractedText == null || extractedText.isEmpty) {
         stopwatch.stop();
@@ -285,11 +296,12 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
       stopwatch.stop();
       _logger.logPerformance('Optimized OCR text extraction and matching', stopwatch.elapsed);
 
-      // Clean up the temporary image file
+      // Clean up the temporary image files
       try {
         await image.delete();
+        await croppedImageFile.delete();
       } catch (e) {
-        _logger.logApp('Failed to delete temporary image file',
+        _logger.logApp('Failed to delete temporary image files',
             level: LogLevel.warning, data: {'error': e.toString()});
       }
 
@@ -299,7 +311,7 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
         'matches': matches,
         'nearestMatches': nearestMatches,
         'confidence': _lastConfidence ?? 0.0,
-        'imageBytes': imageBytes,
+        'imageBytes': croppedImageBytes,
       };
     } catch (e, stackTrace) {
       stopwatch.stop();
@@ -364,6 +376,65 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
   // Process image with path
   Future<String?> processImage(String imagePath) async {
     return await processImageFile(File(imagePath));
+  }
+
+  // Crop image to focus area only (300x200 centered)
+  Future<Uint8List> _cropImageToFocusArea(Uint8List imageBytes) async {
+    try {
+      _logger.logOcr('Cropping image to focus area');
+      
+      // Decode the image
+      final originalImage = img.decodeImage(imageBytes);
+      if (originalImage == null) {
+        throw Exception('Failed to decode image for cropping');
+      }
+
+      // Get camera preview dimensions (this should match the camera preview aspect ratio)
+      final originalWidth = originalImage.width;
+      final originalHeight = originalImage.height;
+      
+      _logger.logOcr('Original image dimensions: ${originalWidth}x${originalHeight}');
+
+      // Focus area dimensions from OCROverlayPainter (300x200 centered)
+      const focusAreaWidth = 300;
+      const focusAreaHeight = 200;
+      
+      // Calculate crop area centered on the image
+      final centerX = originalWidth ~/ 2;
+      final centerY = originalHeight ~/ 2;
+      final cropLeft = (centerX - focusAreaWidth ~/ 2).clamp(0, originalWidth - focusAreaWidth);
+      final cropTop = (centerY - focusAreaHeight ~/ 2).clamp(0, originalHeight - focusAreaHeight);
+      
+      // Ensure crop area doesn't exceed image bounds
+      final actualCropWidth = (focusAreaWidth).clamp(1, originalWidth - cropLeft);
+      final actualCropHeight = (focusAreaHeight).clamp(1, originalHeight - cropTop);
+      
+      _logger.logOcr('Crop area: ${cropLeft},${cropTop} ${actualCropWidth}x${actualCropHeight}');
+
+      // Crop the image
+      final croppedImage = img.copyCrop(
+        originalImage,
+        x: cropLeft,
+        y: cropTop,
+        width: actualCropWidth,
+        height: actualCropHeight,
+      );
+
+      // Encode back to bytes
+      final croppedBytes = img.encodeJpg(croppedImage, quality: 85);
+      
+      _logger.logOcr('Image cropped successfully', 
+          success: true,
+          extractedText: null,
+          confidence: null);
+      
+      return Uint8List.fromList(croppedBytes);
+    } catch (e, stackTrace) {
+      _logger.logError('Failed to crop image to focus area',
+          error: e, stackTrace: stackTrace, category: 'OCR');
+      // Return original image bytes if cropping fails
+      return imageBytes;
+    }
   }
 
   // Internal method to process image for text recognition (same as before)
@@ -1212,6 +1283,16 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
     final index = allMatches.length % itemsWithRemNumbers.length;
     final selectedItem = itemsWithRemNumbers[index];
     return selectedItem['itemCode'] as String?;
+  }
+
+  /// Check if item name matches item code for cards (legacy method - kept for reference)
+  bool _isItemNameMatchForCards(String itemName, String itemCode) {
+    final normalizedItemName = itemName.toLowerCase();
+    final normalizedItemCode = itemCode.toLowerCase();
+    
+    // Simple contains check - you might need more sophisticated matching
+    return normalizedItemName.contains(normalizedItemCode) || 
+           normalizedItemCode.contains(normalizedItemName);
   }
 
   /// Calculate Levenshtein similarity for cards

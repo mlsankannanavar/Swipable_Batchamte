@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../models/batch_match_model.dart';
 import '../utils/app_colors.dart';
 
@@ -47,426 +48,333 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
 
   @override
   Widget build(BuildContext context) {
-    return DraggableScrollableSheet(
-      initialChildSize: 0.8,
-      minChildSize: 0.5,
-      maxChildSize: 0.95,
-      builder: (context, scrollController) {
-        return AnimatedPadding(
-          duration: Duration(milliseconds: 300),
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom,
-          ),
-          child: Container(
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.8,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        children: [
+          // Header with current position indicator
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 20, vertical: 15),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Colors.grey[50],
               borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 10,
-                  offset: Offset(0, -5),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Match ${_currentIndex + 1} of ${widget.matches.length}',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                IconButton(
+                  onPressed: widget.onClose,
+                  icon: Icon(Icons.close, color: AppColors.textSecondary, size: 28),
                 ),
               ],
             ),
+          ),
+          
+          // Swipeable cards
+          Expanded(
+            child: PageView.builder(
+              controller: _pageController,
+              scrollDirection: Axis.vertical,
+              onPageChanged: (index) {
+                setState(() {
+                  _currentIndex = index;
+                });
+              },
+              itemCount: widget.matches.length,
+              itemBuilder: (context, index) {
+                return _buildMatchCard(widget.matches[index], index);
+              },
+            ),
+          ),
+          
+          // Swipe instruction and page indicators
+          Container(
+            padding: EdgeInsets.all(16),
             child: Column(
-          children: [
-            // Drag handle
-            Container(
-              padding: EdgeInsets.only(top: 8),
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[400],
-                  borderRadius: BorderRadius.circular(2),
+              children: [
+                // Page indicators
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(
+                    widget.matches.length,
+                    (index) => Container(
+                      margin: EdgeInsets.symmetric(horizontal: 4),
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: index == _currentIndex 
+                          ? AppColors.primary 
+                          : Colors.grey[300],
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            
-            // Header with current position indicator
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-              decoration: BoxDecoration(
-                color: Colors.grey[50],
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Match ${_currentIndex + 1} of ${widget.matches.length}',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary,
-                    ),
+                SizedBox(height: 8),
+                Text(
+                  _currentIndex < widget.matches.length - 1 
+                    ? 'Swipe up for next match' 
+                    : 'Last match',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 14,
                   ),
-                  IconButton(
-                    onPressed: widget.onClose,
-                    icon: Icon(Icons.close, color: AppColors.textSecondary, size: 28),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
-            
-            // Swipeable cards
-            Expanded(
-              child: PageView.builder(
-                controller: _pageController,
-                scrollDirection: Axis.horizontal, // Changed to horizontal for better UX
-                onPageChanged: (index) {
-                  setState(() {
-                    _currentIndex = index;
-                  });
-                },
-                itemCount: widget.matches.length,
-                itemBuilder: (context, index) {
-                  return _buildMatchCard(widget.matches[index], index);
-                },
-              ),
-            ),
-            
-            // Swipe instruction and page indicators
-            Container(
-              padding: EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  // Navigation buttons
-                  if (widget.matches.length > 1) ...[
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        // Previous button
-                        IconButton(
-                          onPressed: _currentIndex > 0 
-                            ? () {
-                                _pageController.previousPage(
-                                  duration: Duration(milliseconds: 300),
-                                  curve: Curves.easeInOut,
-                                );
-                              }
-                            : null,
-                          icon: Icon(
-                            Icons.chevron_left,
-                            size: 30,
-                            color: _currentIndex > 0 
-                              ? AppColors.primary 
-                              : Colors.grey[400],
-                          ),
-                        ),
-                        
-                        // Page indicators
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: List.generate(
-                            widget.matches.length,
-                            (index) => Container(
-                              margin: EdgeInsets.symmetric(horizontal: 4),
-                              width: 8,
-                              height: 8,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: index == _currentIndex 
-                                  ? AppColors.primary 
-                                  : Colors.grey[300],
-                              ),
-                            ),
-                          ),
-                        ),
-                        
-                        // Next button
-                        IconButton(
-                          onPressed: _currentIndex < widget.matches.length - 1
-                            ? () {
-                                _pageController.nextPage(
-                                  duration: Duration(milliseconds: 300),
-                                  curve: Curves.easeInOut,
-                                );
-                              }
-                            : null,
-                          icon: Icon(
-                            Icons.chevron_right,
-                            size: 30,
-                            color: _currentIndex < widget.matches.length - 1
-                              ? AppColors.primary 
-                              : Colors.grey[400],
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 8),
-                  ] else ...[
-                    // Page indicators for single match
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: List.generate(
-                        widget.matches.length,
-                        (index) => Container(
-                          margin: EdgeInsets.symmetric(horizontal: 4),
-                          width: 8,
-                          height: 8,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: index == _currentIndex 
-                              ? AppColors.primary 
-                              : Colors.grey[300],
-                          ),
-                        ),
-                      ),
-                    ),
-                    SizedBox(height: 8),
-                    Text(
-                      widget.matches.length > 1 
-                        ? (_currentIndex < widget.matches.length - 1 
-                          ? 'Swipe left/right for more matches' 
-                          : 'Last match')
-                        : 'Single match found',
-                      style: TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ],
-        ),
-        ),
-        );
-      },
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildMatchCard(BatchMatch match, int index) {
     final quantityController = _quantityControllers[index]!;
     
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return SingleChildScrollView(
-          padding: EdgeInsets.all(14), // Reduced from 20
-          physics: ClampingScrollPhysics(),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              minHeight: constraints.maxHeight - 28, // Account for reduced padding
+    return SingleChildScrollView(
+      padding: EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Rank indicator
+          Row(
+            children: [
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: _getRankColor(match.rank),
+                  borderRadius: BorderRadius.circular(25),
+                ),
+                child: Text(
+                  'Rank: ${match.rankDisplay}',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              Spacer(),
+              // Confidence badge
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: _getConfidenceColor(match.confidence),
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                child: Text(
+                  '${match.confidence.toStringAsFixed(1)}%',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          
+          SizedBox(height: 24),
+          
+          // Match information card
+          Container(
+            padding: EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey[200]!),
+            ),
+            child: Column(
+              children: [
+                _buildInfoRow('Item Name:', match.itemName, isImportant: true),
+                _buildInfoRow('Batch Number:', match.batchNumber, isImportant: true),
+                _buildInfoRow('Expiry Date:', match.expiryDate, isImportant: true),
+                _buildInfoRow('Requested Qty:', '${match.requestedQuantity}'),
+                
+                // Order information section
+                if (match.purchaseOrderNumber != null || match.saleOrderNumber != null) ...[
+                  SizedBox(height: 12),
+                  Divider(color: Colors.grey[300]),
+                  SizedBox(height: 12),
+                  Text(
+                    'Order Information',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  SizedBox(height: 12),
+                  if (match.purchaseOrderNumber != null)
+                    _buildInfoRow('Purchase Order:', match.purchaseOrderNumber!),
+                  if (match.saleOrderNumber != null)
+                    _buildInfoRow('Sale Order:', match.saleOrderNumber!),
+                ],
+              ],
+            ),
+          ),
+          
+          SizedBox(height: 24),
+          
+          // Quantity input section
+          Container(
+            padding: EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.blue[50],
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.blue[200]!),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Rank indicator - more compact
-                Row(
-                  children: [
-                    Container(
-                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: _getRankColor(match.rank),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        'Rank: ${match.rankDisplay}',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 12, // Reduced from 14
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    Spacer(),
-                    // Confidence badge - more compact
-                    Container(
-                      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: _getConfidenceColor(match.confidence),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        '${match.confidence.toStringAsFixed(1)}%',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 11, // Reduced from 12
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
+                Text(
+                  'Enter Quantity to Submit:',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                SizedBox(height: 12),
+                TextField(
+                  controller: quantityController,
+                  keyboardType: TextInputType.number,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    _MaxValueInputFormatter(match.requestedQuantity),
                   ],
-                ),
-                
-                SizedBox(height: 16), // Reduced from 24
-                
-                // Match information card
-                Container(
-                  padding: EdgeInsets.all(16), // Reduced from 20
-                  decoration: BoxDecoration(
-                    color: Colors.grey[50],
-                    borderRadius: BorderRadius.circular(10), // Reduced from 12
-                    border: Border.all(color: Colors.grey[200]!),
-                  ),
-                  child: Column(
-                    children: [
-                      _buildInfoRow('Item Name:', match.itemName, isImportant: true),
-                      _buildInfoRow('Batch Number:', match.batchNumber, isImportant: true),
-                      _buildInfoRow('Expiry Date:', match.expiryDate, isImportant: true),
-                      _buildInfoRow('Requested Qty:', '${match.requestedQuantity}'),
-                      
-                      // Order information section
-                      if (match.purchaseOrderNumber != null || match.saleOrderNumber != null) ...[
-                        SizedBox(height: 8), // Reduced from 12
-                        Divider(color: Colors.grey[300]),
-                        SizedBox(height: 8), // Reduced from 12
-                        Text(
-                          'Order Information',
-                          style: TextStyle(
-                            fontSize: 14, // Reduced from 16
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textPrimary,
-                          ),
+                  onChanged: (value) {
+                    final enteredQuantity = int.tryParse(value) ?? 0;
+                    if (enteredQuantity > match.requestedQuantity) {
+                      // Reset to max allowed quantity
+                      quantityController.text = match.requestedQuantity.toString();
+                      quantityController.selection = TextSelection.fromPosition(
+                        TextPosition(offset: quantityController.text.length),
+                      );
+                      // Show feedback to user
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Quantity cannot exceed ${match.requestedQuantity} units'),
+                          backgroundColor: Colors.orange,
+                          duration: Duration(seconds: 2),
                         ),
-                        SizedBox(height: 8), // Reduced from 12
-                        if (match.purchaseOrderNumber != null)
-                          _buildInfoRow('Purchase Order:', match.purchaseOrderNumber!),
-                        if (match.saleOrderNumber != null)
-                          _buildInfoRow('Sale Order:', match.saleOrderNumber!),
-                      ],
-                    ],
-                  ),
-                ),
-                
-                SizedBox(height: 16), // Reduced from 24
-                
-                // Quantity input section
-                Container(
-                  padding: EdgeInsets.all(16), // Reduced from 20
-                  decoration: BoxDecoration(
-                    color: Colors.blue[50],
-                    borderRadius: BorderRadius.circular(10), // Reduced from 12
-                    border: Border.all(color: Colors.blue[200]!),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Enter Quantity to Submit:',
-                        style: TextStyle(
-                          fontSize: 14, // Reduced from 16
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                      SizedBox(height: 8), // Reduced from 12
-                      TextField(
-                        controller: quantityController,
-                        keyboardType: TextInputType.number,
-                        autofocus: false,
-                        style: TextStyle(
-                          fontSize: 16, // Reduced from 18
-                          fontWeight: FontWeight.w600,
-                        ),
-                        decoration: InputDecoration(
-                          filled: true,
-                          fillColor: Colors.white,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8), // Reduced from 10
-                            borderSide: BorderSide(color: Colors.blue[300]!),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(color: AppColors.primary, width: 2),
-                          ),
-                          hintText: 'Enter quantity',
-                          prefixIcon: Icon(
-                            Icons.inventory_2_outlined, 
-                            color: AppColors.primary,
-                          ),
-                          suffixText: 'units',
-                          suffixStyle: TextStyle(
-                            color: AppColors.textSecondary,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 12), // Reduced padding
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                
-                SizedBox(height: 16), // Reduced from 24
-                
-                // Action buttons
-                Row(
-                  children: [
-                    Expanded(
-                      flex: 2,
-                      child: ElevatedButton.icon(
-                        onPressed: () => _handleSubmit(match, quantityController),
-                        icon: Icon(Icons.check_circle_outline, color: Colors.white),
-                        label: Text(
-                          'Submit',
-                          style: TextStyle(
-                            fontSize: 14, // Reduced from 16
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          padding: EdgeInsets.symmetric(vertical: 12), // Reduced from 14
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8), // Reduced from 10
-                          ),
-                          elevation: 2,
-                        ),
-                      ),
+                      );
+                    }
+                  },
+                  decoration: InputDecoration(
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: Colors.blue[300]!),
                     ),
-                    SizedBox(width: 10), // Reduced from 12
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: widget.onRetake,
-                        icon: Icon(Icons.camera_alt_outlined, color: AppColors.primary),
-                        label: Text(
-                          'Retake',
-                          style: TextStyle(
-                            fontSize: 14, // Reduced from 16
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                        style: OutlinedButton.styleFrom(
-                          padding: EdgeInsets.symmetric(vertical: 12), // Reduced from 14
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          side: BorderSide(color: AppColors.primary, width: 2),
-                        ),
-                      ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: AppColors.primary, width: 2),
                     ),
-                  ],
+                    hintText: 'Max: ${match.requestedQuantity} units',
+                    prefixIcon: Icon(
+                      Icons.inventory_2_outlined, 
+                      color: AppColors.primary,
+                    ),
+                    suffixText: 'units',
+                    suffixStyle: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
                 ),
-                
-                // Bottom padding for keyboard clearance
-                SizedBox(height: 40), // Reduced from 60
               ],
             ),
           ),
-        );
-      },
+          
+          SizedBox(height: 24),
+          
+          // Action buttons
+          Row(
+            children: [
+              Expanded(
+                flex: 2,
+                child: ElevatedButton.icon(
+                  onPressed: () => _handleSubmit(match, quantityController),
+                  icon: Icon(Icons.check_circle_outline, color: Colors.white),
+                  label: Text(
+                    'Submit',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    padding: EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    elevation: 2,
+                  ),
+                ),
+              ),
+              SizedBox(width: 12),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: widget.onRetake,
+                  icon: Icon(Icons.camera_alt_outlined, color: AppColors.primary),
+                  label: Text(
+                    'Retake',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    padding: EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    side: BorderSide(color: AppColors.primary, width: 2),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildInfoRow(String label, String value, {bool isImportant = false}) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: EdgeInsets.only(bottom: 12),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 110,
+            width: 120,
             child: Text(
               label,
-              style: const TextStyle(
-                fontSize: 12,
+              style: TextStyle(
+                fontSize: 14,
                 fontWeight: FontWeight.w500,
-                color: Colors.grey,
+                color: AppColors.textSecondary,
               ),
             ),
           ),
@@ -474,7 +382,7 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
             child: Text(
               value,
               style: TextStyle(
-                fontSize: isImportant ? 13 : 12,
+                fontSize: isImportant ? 15 : 14,
                 fontWeight: isImportant ? FontWeight.w700 : FontWeight.w600,
                 color: isImportant ? AppColors.primary : AppColors.textPrimary,
               ),
@@ -508,16 +416,53 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
 
   void _handleSubmit(BatchMatch match, TextEditingController controller) {
     final quantity = int.tryParse(controller.text) ?? 0;
-    if (quantity > 0) {
+    if (quantity > 0 && quantity <= match.requestedQuantity) {
       widget.onSubmit(match, quantity);
+    } else if (quantity > match.requestedQuantity) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Quantity cannot exceed ${match.requestedQuantity} units'),
+          backgroundColor: Colors.orange,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please enter a valid quantity'),
+        SnackBar(
+          content: Text('Please enter a valid quantity (1-${match.requestedQuantity})'),
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
         ),
       );
     }
+  }
+}
+
+// Custom input formatter to restrict input to maximum value
+class _MaxValueInputFormatter extends TextInputFormatter {
+  final int maxValue;
+
+  _MaxValueInputFormatter(this.maxValue);
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    if (newValue.text.isEmpty) {
+      return newValue;
+    }
+
+    final intValue = int.tryParse(newValue.text);
+    if (intValue == null) {
+      return oldValue;
+    }
+
+    if (intValue > maxValue) {
+      // Return the old value if new value exceeds max
+      return oldValue;
+    }
+
+    return newValue;
   }
 }

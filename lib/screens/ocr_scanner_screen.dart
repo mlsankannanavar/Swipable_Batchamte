@@ -161,16 +161,11 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
         ));
       }
 
-      // Show swipeable cards in modal bottom sheet directly
+      // Show swipeable cards in modal bottom sheet
       await showModalBottomSheet(
         context: context,
         isScrollControlled: true,
         backgroundColor: Colors.transparent,
-        enableDrag: true,
-        isDismissible: true,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
         builder: (context) => SwipeableBatchMatchCards(
           matches: batchMatches,
           onSubmit: (batchMatch, quantity) async {
@@ -1046,23 +1041,16 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
       
       loggingProvider.logSuccess('OCR processing completed, showing swipeable batch matches');
       
-      // Complete processing state before showing popup
-      setState(() {
-        _isProcessing = false;
-      });
-      
-      // Wait a brief moment to ensure UI updates
-      await Future.delayed(const Duration(milliseconds: 100));
-      
-      // Show swipeable batch match cards after processing is complete
+      // Show swipeable batch match cards instead of traditional dialogs
       await _showSwipeableBatchMatchCards(extractedText);
 
     } catch (e) {
       loggingProvider.logError('Image capture and processing failed: $e');
+      _showInfoDialog('Failed to process image: ${e.toString()}');
+    } finally {
       setState(() {
         _isProcessing = false;
       });
-      _showInfoDialog('Failed to process image: ${e.toString()}');
     }
   }
 
