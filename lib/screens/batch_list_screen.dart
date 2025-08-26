@@ -18,7 +18,7 @@ class BatchListScreen extends StatefulWidget {
 }
 
 class _BatchListScreenState extends State<BatchListScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late TabController _tabController;
   late TextEditingController _searchController;
   late ScrollController _scrollController;
@@ -33,6 +33,9 @@ class _BatchListScreenState extends State<BatchListScreen>
     _searchController = TextEditingController();
     _scrollController = ScrollController();
     
+    // Add observer for app lifecycle
+    WidgetsBinding.instance.addObserver(this);
+    
     // Add listener to rebuild when tab changes
     _tabController.addListener(() {
       setState(() {});
@@ -46,7 +49,39 @@ class _BatchListScreenState extends State<BatchListScreen>
     _tabController.dispose();
     _searchController.dispose();
     _scrollController.dispose();
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    
+    // Check if we need to refresh data when dependencies change
+    // This can happen when navigating back to this screen
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _refreshDataIfNeeded();
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    
+    // When app comes to foreground, refresh data if needed
+    if (state == AppLifecycleState.resumed) {
+      _refreshDataIfNeeded();
+    }
+  }
+
+  void _refreshDataIfNeeded() {
+    final batchProvider = Provider.of<BatchProvider>(context, listen: false);
+    
+    // If we have a current session but are in error state or have no batches, refresh
+    if (batchProvider.currentSessionId != null && 
+        (batchProvider.hasError || batchProvider.batches.isEmpty)) {
+      batchProvider.loadBatchesForCurrentSession();
+    }
   }
 
   void _initializeData() {
@@ -55,6 +90,16 @@ class _BatchListScreenState extends State<BatchListScreen>
       final batchProvider = Provider.of<BatchProvider>(context, listen: false);
       
       loggingProvider.logApp('Batch list screen initialized');
+      
+      // If we have a current session, ensure data is up to date
+      if (batchProvider.currentSessionId != null) {
+        // If there's an error state or no batches, force refresh the current session
+        if (batchProvider.hasError || batchProvider.batches.isEmpty) {
+          batchProvider.loadBatchesForCurrentSession();
+        }
+      }
+      
+      // Also load batch history for the second tab
       batchProvider.loadBatchHistory();
     });
   }
