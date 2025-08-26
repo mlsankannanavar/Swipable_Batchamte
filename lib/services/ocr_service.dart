@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
-import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:camera/camera.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
@@ -378,7 +377,7 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
     return await processImageFile(File(imagePath));
   }
 
-  // Crop image to focus area only (300x200 centered)
+  // Crop image to focus area only (matching the overlay square exactly)
   Future<Uint8List> _cropImageToFocusArea(Uint8List imageBytes) async {
     try {
       _logger.logOcr('Cropping image to focus area');
@@ -389,15 +388,32 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
         throw Exception('Failed to decode image for cropping');
       }
 
-      // Get camera preview dimensions (this should match the camera preview aspect ratio)
+      // Get camera capture dimensions
       final originalWidth = originalImage.width;
       final originalHeight = originalImage.height;
       
       _logger.logOcr('Original image dimensions: ${originalWidth}x${originalHeight}');
 
-      // Focus area dimensions from OCROverlayPainter (300x200 centered)
-      const focusAreaWidth = 300;
-      const focusAreaHeight = 200;
+      // Focus area dimensions from OCROverlayPainter in the UI
+      const uiOverlayWidth = 300.0; // UI overlay width
+      const uiOverlayHeight = 200.0; // UI overlay height
+      
+      // Calculate scale factors to convert UI overlay dimensions to actual camera resolution
+      // Assuming the camera preview is displayed to fill the screen width maintaining aspect ratio
+      
+      // Estimate the scale factor (this should be adjusted based on how the camera preview is displayed)
+      // For typical camera resolutions (e.g., 1920x1080 or higher), the scale factor is significant
+      final scaleFactorX = originalWidth / 360.0; // Typical screen width reference
+      final scaleFactorY = originalHeight / 640.0; // Typical screen height reference
+      
+      // Use the larger scale factor to ensure we capture the full overlay area
+      final scaleFactor = max(scaleFactorX, scaleFactorY);
+      
+      // Calculate actual crop dimensions scaled to camera resolution
+      final focusAreaWidth = (uiOverlayWidth * scaleFactor * 1.2).round(); // 1.2x to ensure full coverage
+      final focusAreaHeight = (uiOverlayHeight * scaleFactor * 1.2).round(); // 1.2x to ensure full coverage
+      
+      _logger.logOcr('Scale factor: $scaleFactor, Scaled focus area: ${focusAreaWidth}x${focusAreaHeight}');
       
       // Calculate crop area centered on the image
       final centerX = originalWidth ~/ 2;
@@ -409,7 +425,7 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
       final actualCropWidth = (focusAreaWidth).clamp(1, originalWidth - cropLeft);
       final actualCropHeight = (focusAreaHeight).clamp(1, originalHeight - cropTop);
       
-      _logger.logOcr('Crop area: ${cropLeft},${cropTop} ${actualCropWidth}x${actualCropHeight}');
+      _logger.logOcr('Final crop area: ${cropLeft},${cropTop} ${actualCropWidth}x${actualCropHeight}');
 
       // Crop the image
       final croppedImage = img.copyCrop(

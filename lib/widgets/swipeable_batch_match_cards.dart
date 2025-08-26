@@ -48,45 +48,69 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.8,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      child: Column(
-        children: [
-          // Header with current position indicator
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-            decoration: BoxDecoration(
-              color: Colors.grey[50],
-              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Match ${_currentIndex + 1} of ${widget.matches.length}',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
+    return DraggableScrollableSheet(
+      initialChildSize: 0.8,
+      minChildSize: 0.5,
+      maxChildSize: 0.95,
+      builder: (context, scrollController) {
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 10,
+                offset: Offset(0, -5),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              // Drag handle
+              Container(
+                padding: EdgeInsets.only(top: 8),
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[400],
+                    borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-                IconButton(
-                  onPressed: widget.onClose,
-                  icon: Icon(Icons.close, color: AppColors.textSecondary, size: 28),
+              ),
+              
+              // Header with current position indicator
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+                decoration: BoxDecoration(
+                  color: Colors.grey[50],
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
                 ),
-              ],
-            ),
-          ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Match ${_currentIndex + 1} of ${widget.matches.length}',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: widget.onClose,
+                      icon: Icon(Icons.close, color: AppColors.textSecondary, size: 28),
+                    ),
+                  ],
+                ),
+              ),
           
           // Swipeable cards
           Expanded(
             child: PageView.builder(
               controller: _pageController,
-              scrollDirection: Axis.vertical,
+              scrollDirection: Axis.horizontal, // Changed to horizontal for better UX
               onPageChanged: (index) {
                 setState(() {
                   _currentIndex = index;
@@ -124,9 +148,11 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
                 ),
                 SizedBox(height: 8),
                 Text(
-                  _currentIndex < widget.matches.length - 1 
-                    ? 'Swipe up for next match' 
-                    : 'Last match',
+                  widget.matches.length > 1 
+                    ? (_currentIndex < widget.matches.length - 1 
+                      ? 'Swipe left/right for more matches' 
+                      : 'Last match')
+                    : 'Single match found',
                   style: TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 14,
@@ -135,8 +161,10 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
               ],
             ),
           ),
-        ],
-      ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -251,6 +279,7 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
                 TextField(
                   controller: quantityController,
                   keyboardType: TextInputType.number,
+                  scrollPadding: EdgeInsets.only(bottom: 300), // Add better scroll padding for keyboard
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,

@@ -416,8 +416,19 @@ class _QRScannerScreenState extends State<QRScannerScreen>
       
       loggingProvider.logApp('Extracted session ID: $sessionId');
       
+      // Force refresh if we're in error state or if this is a new session
+      final shouldForceRefresh = batchProvider.hasError || batchProvider.currentSessionId != sessionId;
+      
+      loggingProvider.logApp('Loading batches', 
+          data: {
+            'sessionId': sessionId,
+            'forceRefresh': shouldForceRefresh,
+            'currentState': batchProvider.loadingState.toString(),
+            'hasError': batchProvider.hasError,
+          });
+      
       // Load batches for this session
-      await batchProvider.loadBatchesForSession(sessionId);
+      await batchProvider.loadBatchesForSession(sessionId, forceRefresh: shouldForceRefresh);
       
       loggingProvider.logSuccess('Session loaded successfully');
       
