@@ -48,8 +48,12 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
 
   @override
   Widget build(BuildContext context) {
+    // Get keyboard height to adjust the sheet when keyboard appears
+    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+    final hasKeyboard = keyboardHeight > 0;
+    
     return DraggableScrollableSheet(
-      initialChildSize: 0.8,
+      initialChildSize: hasKeyboard ? 0.9 : 0.8,
       minChildSize: 0.5,
       maxChildSize: 0.95,
       builder: (context, scrollController) {
@@ -279,7 +283,7 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
                 TextField(
                   controller: quantityController,
                   keyboardType: TextInputType.number,
-                  scrollPadding: EdgeInsets.only(bottom: 300), // Add better scroll padding for keyboard
+                  scrollPadding: EdgeInsets.only(bottom: 400), // Increased scroll padding for better keyboard visibility
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
