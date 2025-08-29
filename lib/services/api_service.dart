@@ -5,6 +5,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import '../models/api_response_model.dart';
 import '../models/health_response_model.dart';
 import '../models/batch_model.dart';
+import '../models/session_details_model.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../utils/log_level.dart';
@@ -483,6 +484,111 @@ class ApiService {
       message: response.error,
       statusCode: response.success ? 200 : 500,
     );
+  }
+
+  // Get session details with new hierarchical structure (racks/items/batches)
+  Future<SessionDetailsResponse> getSessionDetails(String sessionId) async {
+    final endpoint = '${Constants.filteredBatchesEndpoint}/$sessionId';
+    final url = '$baseUrl$endpoint';
+    final stopwatch = Stopwatch()..start();
+
+    // Log the outgoing request
+    _logger.logApiRequest('GET', url, headers: defaultHeaders);
+
+    try {
+      // Validate session ID
+      if (!Helpers.isValidSessionId(sessionId)) {
+        throw ArgumentError('Invalid session ID: $sessionId');
+      }
+
+      // Check network connectivity
+      final connectivityResults = await Connectivity().checkConnectivity();
+      if (connectivityResults.contains(ConnectivityResult.none) || connectivityResults.isEmpty) {
+        _logger.logNetwork('No network connectivity', level: LogLevel.error);
+        throw const SocketException('No network connection');
+      }
+
+      final response = await _client
+          .get(Uri.parse(url), headers: defaultHeaders)
+          .timeout(timeout);
+
+      stopwatch.stop();
+
+      // Log the response
+      _logger.logApiResponse('GET', url, response.statusCode, stopwatch.elapsed,
+          headers: response.headers, body: response.body);
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body) as Map<String, dynamic>;
+        
+        // Check if this is the new hierarchical API format
+        if (jsonData.containsKey('racks') && 
+            jsonData.containsKey('unitCode') && 
+            jsonData.containsKey('storeId')) {
+          
+          final sessionDetails = SessionDetailsModel.fromJson(jsonData, sessionId);
+          
+          _logger.logApp('Session details loaded successfully',
+              level: LogLevel.success,
+              data: {
+                'sessionId': sessionId,
+                'rackCount': sessionDetails.racks.length,
+                'totalItems': sessionDetails.totalItems,
+                'duration': stopwatch.elapsed.inMilliseconds
+              });
+
+          return SessionDetailsResponse(
+            success: true,
+            data: sessionDetails,
+            statusCode: response.statusCode,
+            headers: response.headers,
+            duration: stopwatch.elapsed,
+          );
+        } else {
+          // Fallback for legacy format
+          _logger.logApp('Legacy API format detected, converting to session details',
+              level: LogLevel.warning);
+          
+          return SessionDetailsResponse(
+            success: false,
+            error: 'Legacy API format not supported for session details',
+            statusCode: response.statusCode,
+            headers: response.headers,
+            duration: stopwatch.elapsed,
+          );
+        }
+      } else {
+        String errorMessage;
+        try {
+          final errorData = json.decode(response.body) as Map<String, dynamic>;
+          errorMessage = errorData['message'] ?? errorData['error'] ?? 
+                        'Failed to load session details';
+        } catch (e) {
+          errorMessage = 'Failed to load session details (${response.statusCode})';
+        }
+        
+        _logger.logError('Session details loading failed', 
+            error: errorMessage);
+
+        return SessionDetailsResponse(
+          success: false,
+          error: errorMessage,
+          statusCode: response.statusCode,
+          headers: response.headers,
+          duration: stopwatch.elapsed,
+        );
+      }
+    } catch (e, stackTrace) {
+      stopwatch.stop();
+      _logger.logError('Exception while loading session details',
+          error: e, stackTrace: stackTrace);
+      
+      return SessionDetailsResponse(
+        success: false,
+        error: 'Failed to load session details: $e',
+        duration: stopwatch.elapsed,
+      );
+    }
   }
 
   // Dispose resources

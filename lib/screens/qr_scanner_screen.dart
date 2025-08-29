@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:provider/provider.dart';
-import '../providers/batch_provider.dart';
+import '../providers/session_provider.dart';
 import '../providers/logging_provider.dart';
 import '../widgets/loading_widget.dart';
 import '../widgets/error_widget.dart';
 import '../utils/app_colors.dart';
-import 'home_screen.dart';
+import 'new_home_screen.dart';
 
 class QRScannerScreen extends StatefulWidget {
   const QRScannerScreen({super.key});
@@ -394,7 +394,7 @@ class _QRScannerScreenState extends State<QRScannerScreen>
     });
 
     final loggingProvider = Provider.of<LoggingProvider>(context, listen: false);
-    final batchProvider = Provider.of<BatchProvider>(context, listen: false);
+    final sessionProvider = Provider.of<SessionProvider>(context, listen: false);
 
     try {
       loggingProvider.logQRScan('QR code detected', qrData: qrCode);
@@ -416,19 +416,8 @@ class _QRScannerScreenState extends State<QRScannerScreen>
       
       loggingProvider.logApp('Extracted session ID: $sessionId');
       
-      // Force refresh if we're in error state or if this is a new session
-      final shouldForceRefresh = batchProvider.hasError || batchProvider.currentSessionId != sessionId;
-      
-      loggingProvider.logApp('Loading batches', 
-          data: {
-            'sessionId': sessionId,
-            'forceRefresh': shouldForceRefresh,
-            'currentState': batchProvider.loadingState.toString(),
-            'hasError': batchProvider.hasError,
-          });
-      
-      // Load batches for this session
-      await batchProvider.loadBatchesForSession(sessionId, forceRefresh: shouldForceRefresh);
+      // Load session data including racks and items
+      await sessionProvider.loadSession(sessionId);
       
       loggingProvider.logSuccess('Session loaded successfully');
       
@@ -436,7 +425,6 @@ class _QRScannerScreenState extends State<QRScannerScreen>
       _showSuccessDialog(sessionId);
     } catch (e) {
       loggingProvider.logError('QR scan error: $e', stackTrace: StackTrace.current);
-      batchProvider.incrementErrorCount();
       _showErrorDialog('Failed to process QR code: $e');
     } finally {
       if (mounted) {
@@ -488,8 +476,10 @@ class _QRScannerScreenState extends State<QRScannerScreen>
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => Consumer<BatchProvider>(
-        builder: (context, batchProvider, child) {
+      builder: (context) => Consumer<SessionProvider>(
+        builder: (context, sessionProvider, child) {
+          final session = sessionProvider.currentSession;
+          
           return AlertDialog(
             icon: const Icon(
               Icons.check_circle,
@@ -520,14 +510,28 @@ class _QRScannerScreenState extends State<QRScannerScreen>
                         ),
                       ),
                       const SizedBox(height: 8),
-                      Text(
-                        'Batches loaded: ${batchProvider.batchCount}',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: Colors.green,
-                          fontWeight: FontWeight.w500,
+                      if (session != null) ...[
+                        Text(
+                          'Store: ${session.storeId}',
+                          style: const TextStyle(fontSize: 14),
                         ),
-                      ),
+                        Text(
+                          'Racks: ${session.racks.length}',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Colors.green,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        Text(
+                          'Total Items: ${session.totalItems}',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Colors.green,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -539,13 +543,13 @@ class _QRScannerScreenState extends State<QRScannerScreen>
                   Navigator.of(context).pop(); // Close dialog
                   // Navigate to home screen and clear the entire navigation stack
                   Navigator.of(context).pushAndRemoveUntil(
-                    MaterialPageRoute(builder: (context) => const HomeScreen()),
+                    MaterialPageRoute(builder: (context) => const NewHomeScreen()),
                     (route) => false,
                   );
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
-                  foregroundColor: AppColors.buttonText,
+                  foregroundColor: Colors.white,
                 ),
                 child: const Text('Continue to Home'),
               ),

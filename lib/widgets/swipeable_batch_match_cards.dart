@@ -25,17 +25,19 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
   late PageController _pageController;
   int _currentIndex = 0;
   final Map<int, TextEditingController> _quantityControllers = {};
+  final Map<int, FocusNode> _quantityFocusNodes = {};
 
   @override
   void initState() {
     super.initState();
     _pageController = PageController();
     
-    // Initialize quantity controllers with prefilled values
+    // Initialize quantity controllers and focus nodes with prefilled values
     for (int i = 0; i < widget.matches.length; i++) {
       _quantityControllers[i] = TextEditingController(
         text: widget.matches[i].requestedQuantity.toString(),
       );
+      _quantityFocusNodes[i] = FocusNode();
     }
   }
 
@@ -43,17 +45,16 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
   void dispose() {
     _pageController.dispose();
     _quantityControllers.values.forEach((controller) => controller.dispose());
+    _quantityFocusNodes.values.forEach((focusNode) => focusNode.dispose());
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    // Get keyboard height to adjust the sheet when keyboard appears
     final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
-    final hasKeyboard = keyboardHeight > 0;
     
     return DraggableScrollableSheet(
-      initialChildSize: hasKeyboard ? 0.9 : 0.8,
+      initialChildSize: keyboardHeight > 0 ? 0.95 : 0.8, // Expand when keyboard is open
       minChildSize: 0.5,
       maxChildSize: 0.95,
       builder: (context, scrollController) {
@@ -61,122 +62,169 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 10,
-                offset: Offset(0, -5),
-              ),
-            ],
           ),
           child: Column(
             children: [
-              // Drag handle
-              Container(
-                padding: EdgeInsets.only(top: 8),
-                child: Container(
-                  width: 40,
-                  height: 4,
+                // Drag handle
+                Container(
+                  padding: EdgeInsets.only(top: 8),
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[400],
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                
+                // Header with current position indicator
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 15),
                   decoration: BoxDecoration(
-                    color: Colors.grey[400],
-                    borderRadius: BorderRadius.circular(2),
+                    color: Colors.grey[50],
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Match ${_currentIndex + 1} of ${widget.matches.length}',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: widget.onClose,
+                        icon: Icon(Icons.close, color: AppColors.textSecondary, size: 28),
+                      ),
+                    ],
                   ),
                 ),
-              ),
-              
-              // Header with current position indicator
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-                decoration: BoxDecoration(
-                  color: Colors.grey[50],
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Match ${_currentIndex + 1} of ${widget.matches.length}',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: widget.onClose,
-                      icon: Icon(Icons.close, color: AppColors.textSecondary, size: 28),
-                    ),
-                  ],
-                ),
-              ),
-          
-          // Swipeable cards
-          Expanded(
-            child: PageView.builder(
-              controller: _pageController,
-              scrollDirection: Axis.horizontal, // Changed to horizontal for better UX
-              onPageChanged: (index) {
-                setState(() {
-                  _currentIndex = index;
-                });
-              },
-              itemCount: widget.matches.length,
-              itemBuilder: (context, index) {
-                return _buildMatchCard(widget.matches[index], index);
-              },
-            ),
-          ),
-          
-          // Swipe instruction and page indicators
-          Container(
-            padding: EdgeInsets.all(16),
-            child: Column(
-              children: [
-                // Page indicators
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(
-                    widget.matches.length,
-                    (index) => Container(
-                      margin: EdgeInsets.symmetric(horizontal: 4),
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: index == _currentIndex 
-                          ? AppColors.primary 
-                          : Colors.grey[300],
-                      ),
-                    ),
+                
+                // Swipeable cards
+                Expanded(
+                  child: PageView.builder(
+                    controller: _pageController,
+                    scrollDirection: Axis.horizontal, // Changed to horizontal for better UX
+                    onPageChanged: (index) {
+                      setState(() {
+                        _currentIndex = index;
+                      });
+                    },
+                    itemCount: widget.matches.length,
+                    itemBuilder: (context, index) {
+                      return _buildMatchCard(widget.matches[index], index);
+                    },
                   ),
                 ),
-                SizedBox(height: 8),
-                Text(
-                  widget.matches.length > 1 
-                    ? (_currentIndex < widget.matches.length - 1 
-                      ? 'Swipe left/right for more matches' 
-                      : 'Last match')
-                    : 'Single match found',
-                  style: TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 14,
+                
+                // Navigation and indicators
+                Container(
+                  padding: EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      // Navigation buttons for horizontal swiping
+                      if (widget.matches.length > 1) ...[
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            // Previous button
+                            IconButton(
+                              onPressed: _currentIndex > 0 
+                                ? () {
+                                    _pageController.previousPage(
+                                      duration: Duration(milliseconds: 300),
+                                      curve: Curves.easeInOut,
+                                    );
+                                  }
+                                : null,
+                              icon: Icon(
+                                Icons.chevron_left,
+                                size: 30,
+                                color: _currentIndex > 0 
+                                  ? AppColors.primary 
+                                  : Colors.grey[400],
+                              ),
+                            ),
+                            
+                            // Page indicators
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: List.generate(
+                                widget.matches.length,
+                                (index) => Container(
+                                  margin: EdgeInsets.symmetric(horizontal: 4),
+                                  width: 8,
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: index == _currentIndex 
+                                      ? AppColors.primary 
+                                      : Colors.grey[300],
+                                  ),
+                                ),
+                              ),
+                            ),
+                            
+                            // Next button
+                            IconButton(
+                              onPressed: _currentIndex < widget.matches.length - 1
+                                ? () {
+                                    _pageController.nextPage(
+                                      duration: Duration(milliseconds: 300),
+                                      curve: Curves.easeInOut,
+                                    );
+                                  }
+                                : null,
+                              icon: Icon(
+                                Icons.chevron_right,
+                                size: 30,
+                                color: _currentIndex < widget.matches.length - 1
+                                  ? AppColors.primary 
+                                  : Colors.grey[400],
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 8),
+                      ],
+                      
+                      // Instruction text
+                      Text(
+                        widget.matches.length > 1 
+                          ? (_currentIndex < widget.matches.length - 1 
+                            ? 'Swipe left/right for more matches' 
+                            : 'Last match')
+                          : 'Single match found',
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
-          ),
-            ],
-          ),
-        );
+          );
       },
     );
   }
 
   Widget _buildMatchCard(BatchMatch match, int index) {
     final quantityController = _quantityControllers[index]!;
+    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
     
     return SingleChildScrollView(
-      padding: EdgeInsets.all(20),
+      padding: EdgeInsets.fromLTRB(
+        20, 
+        20, 
+        20, 
+        keyboardHeight > 0 ? keyboardHeight * 0.3 + 20 : 20, // Extra padding when keyboard is open
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -282,8 +330,9 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
                 SizedBox(height: 12),
                 TextField(
                   controller: quantityController,
+                  focusNode: _quantityFocusNodes[index],
                   keyboardType: TextInputType.number,
-                  scrollPadding: EdgeInsets.only(bottom: 400), // Increased scroll padding for better keyboard visibility
+                  textInputAction: TextInputAction.done,
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
@@ -292,6 +341,13 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
                     FilteringTextInputFormatter.digitsOnly,
                     _MaxValueInputFormatter(match.requestedQuantity),
                   ],
+                  onTap: () {
+                    // Ensure field content is selected when tapped
+                    quantityController.selection = TextSelection(
+                      baseOffset: 0,
+                      extentOffset: quantityController.text.length,
+                    );
+                  },
                   onChanged: (value) {
                     final enteredQuantity = int.tryParse(value) ?? 0;
                     if (enteredQuantity > match.requestedQuantity) {
@@ -337,7 +393,8 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
             ),
           ),
           
-          SizedBox(height: 24),
+          // Responsive spacing based on keyboard visibility
+          SizedBox(height: keyboardHeight > 0 ? 16 : 24),
           
           // Action buttons
           Row(

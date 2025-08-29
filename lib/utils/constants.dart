@@ -19,6 +19,7 @@ class Constants {
   static const String logsBoxKey = 'logs_box';
   static const String settingsBoxKey = 'settings_box';
   static const String batchDataBoxKey = 'batch_data_box';
+  static const String sessionBoxKey = 'session_box';
   
   // Settings Keys
   static const String enableLoggingKey = 'enable_logging';

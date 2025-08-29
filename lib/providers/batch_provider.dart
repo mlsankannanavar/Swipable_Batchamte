@@ -345,16 +345,9 @@ class BatchProvider extends ChangeNotifier {
   
   int get totalScannedBatches => _batches.length;
 
-  // Load batch history (alias for loadBatches with refresh if in error state)
+  // Load batch history (alias for loadBatches)
   Future<void> loadBatchHistory() async {
-    // Force refresh if we're in error state to allow recovery from previous failures
-    final shouldForceRefresh = _loadingState == BatchLoadingState.error;
-    
-    if (_currentSessionId != null) {
-      await loadBatchesForSession(_currentSessionId!, forceRefresh: shouldForceRefresh);
-    } else {
-      await loadBatches();
-    }
+    await loadBatches();
   }
 
   // Toggle favorite status
@@ -592,11 +585,7 @@ class BatchProvider extends ChangeNotifier {
 
   // Renamed original method to avoid conflict
   Future<void> loadBatchesForSession(String sessionId, {bool forceRefresh = false}) async {
-    // Only use cached batches if we have a successful state (not error state)
-    if (_currentSessionId == sessionId && 
-        !forceRefresh && 
-        _batches.isNotEmpty && 
-        _loadingState != BatchLoadingState.error) {
+    if (_currentSessionId == sessionId && !forceRefresh && _batches.isNotEmpty) {
       _logger.logApp('Using cached batches for session',
           additionalData: {'sessionId': sessionId, 'count': _batches.length});
       return;
@@ -836,8 +825,7 @@ class BatchProvider extends ChangeNotifier {
       return;
     }
     
-    // Force refresh when called from pull-to-refresh
-    await loadBatchesForSession(_currentSessionId!, forceRefresh: true);
+    await loadBatchesForSession(_currentSessionId!);
   }
 
   // Log operation helper

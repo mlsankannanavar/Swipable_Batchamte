@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'batch_model.dart';
+import 'session_details_model.dart';
 
 class ApiResponse<T> {
   final bool success;
@@ -270,4 +271,27 @@ class BatchListResponse extends ApiResponse<List<BatchModel>> {
   int get batchCount => data?.length ?? 0;
   bool get hasBatches => batchCount > 0;
   List<BatchModel> get batches => data ?? [];
+}
+
+// Specialized response for session details with hierarchical structure
+class SessionDetailsResponse extends ApiResponse<SessionDetailsModel> {
+  SessionDetailsResponse({
+    required super.success,
+    super.data,
+    super.message,
+    super.error,
+    super.statusCode,
+    super.headers,
+    super.duration,
+  });
+
+  SessionDetailsModel? get sessionDetails => data;
+  bool get hasSessionDetails => data != null;
+  
+  // Convenience getters
+  List<String> get rackNames => data?.rackNames ?? [];
+  int get totalRacks => data?.racks.length ?? 0;
+  int get totalItems => data?.totalItems ?? 0;
+  int get totalAvailableItems => data?.totalAvailableItems ?? 0;
+  int get totalSubmittedItems => data?.totalSubmittedItems ?? 0;
 }

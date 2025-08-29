@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'providers/app_state_provider.dart';
 import 'providers/batch_provider.dart';
+import 'providers/session_provider.dart';
 import 'providers/logging_provider.dart';
 import 'screens/splash_screen.dart';
 import 'utils/app_colors.dart';
@@ -25,6 +26,7 @@ class BatchMateApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => AppStateProvider()),
         ChangeNotifierProvider(create: (_) => BatchProvider()),
+        ChangeNotifierProvider(create: (_) => SessionProvider()),
         ChangeNotifierProvider(create: (_) => LoggingProvider()),
       ],
       child: MaterialApp(
