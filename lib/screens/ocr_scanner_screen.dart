@@ -6,6 +6,7 @@ import 'dart:io';
 
 import '../providers/logging_provider.dart';
 import '../providers/batch_provider.dart';
+import '../providers/session_provider.dart';
 import '../services/ocr_service.dart';
 import '../services/api_service.dart';
 import '../widgets/loading_widget.dart';
@@ -117,25 +118,50 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
 
   /// Show swipeable batch match cards for top 5 matches
   Future<void> _showSwipeableBatchMatchCards(String extractedText) async {
-    final batchProvider = Provider.of<BatchProvider>(context, listen: false);
+    final sessionProvider = Provider.of<SessionProvider>(context, listen: false);
     final loggingProvider = Provider.of<LoggingProvider>(context, listen: false);
     
     try {
-      // Get cached batches
-      final batches = batchProvider.batches;
-      if (batches.isEmpty) {
-        _showSimpleErrorDialog('No batches available', 'Please scan QR code first to load batch data.');
+      // Check if we have an active session
+      if (!sessionProvider.hasSession) {
+        _showSimpleErrorDialog('No Active Session', 'Please scan a QR code first to load session data.');
         return;
       }
 
-      // Get session details from batch provider
-      final sessionDetails = batchProvider.sessionDetails ?? {};
+      // Get all batches from all items in the current session
+      final session = sessionProvider.currentSession!;
+      final allBatches = <Map<String, dynamic>>[];
+      
+      for (final rack in session.racks) {
+        for (final item in rack.items) {
+          for (final batch in item.batches) {
+            allBatches.add({
+              'batchNumber': batch.batchNumber,
+              'expiryDate': batch.expiryDate,
+              'itemName': item.itemName,
+              'quantity': item.quantity,
+              'rackName': rack.rackName,
+            });
+          }
+        }
+      }
+      
+      if (allBatches.isEmpty) {
+        _showSimpleErrorDialog('No batches available', 'No batch data found in the current session.');
+        return;
+      }
 
-      // Find top 5 matches using the new OCR service method
+      loggingProvider.logApp('Found ${allBatches.length} batches across all items for matching');
+
+      // Find top 5 matches using the OCR service method
       final matchResults = _ocrService.findTop5BatchMatchesForCards(
         extractedText: extractedText,
-        batches: batches,
-        sessionDetails: sessionDetails,
+        batches: allBatches,
+        sessionDetails: {
+          'sessionId': session.sessionId,
+          'storeId': session.storeId,
+          'unitCode': session.unitCode,
+        },
       );
 
       if (matchResults.isEmpty) {
@@ -462,10 +488,10 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<BatchProvider>(
-      builder: (context, batchProvider, child) {
+    return Consumer<SessionProvider>(
+      builder: (context, sessionProvider, child) {
         // Check if session exists before showing OCR scanner
-        if (!batchProvider.hasSession) {
+        if (!sessionProvider.hasSession) {
           return Scaffold(
             appBar: AppBar(
               title: const Text('OCR Scanner'),
@@ -533,15 +559,15 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
 
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
-      title: Consumer<BatchProvider>(
-        builder: (context, batchProvider, child) {
+      title: Consumer<SessionProvider>(
+        builder: (context, sessionProvider, child) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text('OCR Scanner'),
-              if (batchProvider.hasSession)
+              if (sessionProvider.hasSession)
                 Text(
-                  'Session: ${batchProvider.currentSessionId}',
+                  'Session: ${sessionProvider.currentSessionId}',
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.normal,

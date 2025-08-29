@@ -6,7 +6,7 @@ import '../providers/logging_provider.dart';
 import '../widgets/loading_widget.dart';
 import '../widgets/error_widget.dart';
 import '../utils/app_colors.dart';
-import 'new_home_screen.dart';
+import 'main_home_screen.dart';
 
 class QRScannerScreen extends StatefulWidget {
   const QRScannerScreen({super.key});
@@ -541,9 +541,9 @@ class _QRScannerScreenState extends State<QRScannerScreen>
               ElevatedButton(
                 onPressed: () {
                   Navigator.of(context).pop(); // Close dialog
-                  // Navigate to home screen and clear the entire navigation stack
+                  // Navigate to main home screen and clear the entire navigation stack
                   Navigator.of(context).pushAndRemoveUntil(
-                    MaterialPageRoute(builder: (context) => const NewHomeScreen()),
+                    MaterialPageRoute(builder: (context) => const MainHomeScreen()),
                     (route) => false,
                   );
                 },
