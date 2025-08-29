@@ -5,7 +5,7 @@ import '../models/rack_model.dart';
 import '../widgets/loading_widget.dart';
 import '../widgets/error_widget.dart';
 import '../utils/app_colors.dart';
-import 'ocr_scanner_screen.dart';
+import 'item_ocr_scanner_screen.dart';
 
 class BatchHistoryScreen extends StatefulWidget {
   const BatchHistoryScreen({super.key});
@@ -291,12 +291,6 @@ class _BatchHistoryScreenState extends State<BatchHistoryScreen> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                    )
-                  else
-                    Icon(
-                      Icons.camera_alt,
-                      color: AppColors.primary,
-                      size: 20,
                     ),
                 ],
               ),
@@ -345,11 +339,26 @@ class _BatchHistoryScreenState extends State<BatchHistoryScreen> {
   }
 
   void _openOCRScanner(ItemModel item) {
-    // TODO: Pass the target item to OCR scanner for specific matching
+    // Navigate to item-specific OCR scanner
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => const OCRScannerScreen(),
+        builder: (context) => ItemOCRScannerScreen(
+          selectedItem: item,
+          onBatchSubmitted: (String selectedBatch) {
+            // Handle batch submission
+            final sessionProvider = Provider.of<SessionProvider>(context, listen: false);
+            sessionProvider.submitItemWithBatch(item, selectedBatch);
+            
+            // Show success message
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('${item.itemName} submitted successfully with batch $selectedBatch!'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          },
+        ),
       ),
     );
   }

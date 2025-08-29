@@ -4,7 +4,7 @@ import '../providers/app_state_provider.dart';
 import '../providers/logging_provider.dart';
 import '../providers/session_provider.dart';
 import '../screens/qr_scanner_screen.dart';
-import '../screens/ocr_scanner_screen.dart';
+import '../screens/item_ocr_scanner_screen.dart';
 import '../screens/log_viewer_screen.dart';
 import '../screens/settings_screen.dart';
 import '../utils/app_colors.dart';
@@ -206,14 +206,108 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
                   _buildSubmittedItemsScreen(sessionProvider),
                 ],
               )
-            : _buildQRScannerScreen(sessionProvider),
+            : _buildWelcomeScreen(sessionProvider),
         );
       },
     );
   }
 
-  Widget _buildQRScannerScreen(SessionProvider sessionProvider) {
-    return const QRScannerScreen();
+  Widget _buildWelcomeScreen(SessionProvider sessionProvider) {
+    return Container(
+      padding: const EdgeInsets.all(24.0),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // App Logo/Icon
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.qr_code_scanner,
+              size: 80,
+              color: Colors.white,
+            ),
+          ),
+          
+          const SizedBox(height: 32),
+          
+          // Welcome Title
+          const Text(
+            'Welcome to BatchMate',
+            style: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          
+          const SizedBox(height: 16),
+          
+          // Subtitle
+          const Text(
+            'Scan a QR code to start managing your pharmaceutical batches',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.white70,
+              height: 1.5,
+            ),
+          ),
+          
+          const SizedBox(height: 48),
+          
+          // Scan QR Button
+          SizedBox(
+            width: double.infinity,
+            height: 56,
+            child: ElevatedButton.icon(
+              onPressed: _navigateToQRScanner,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: AppColors.primary,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 4,
+              ),
+              icon: const Icon(Icons.qr_code_scanner, size: 24),
+              label: const Text(
+                'Scan QR Code',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+          
+          const SizedBox(height: 24),
+          
+          // Additional info
+          const Text(
+            'Make sure your QR code contains session information',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.white60,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _navigateToQRScanner() {
+    final loggingProvider = Provider.of<LoggingProvider>(context, listen: false);
+    loggingProvider.logApp('Navigating to QR scanner');
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const QRScannerScreen()),
+    );
   }
 
   Widget _buildAvailableItemsScreen(SessionProvider sessionProvider) {
@@ -510,13 +604,6 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
                         ],
                       ),
                     ),
-                  ] else ...[
-                    // Visual indicator that the card is clickable
-                    Icon(
-                      Icons.camera_alt,
-                      color: AppColors.primary,
-                      size: 24,
-                    ),
                   ],
                 ],
               ),
@@ -534,27 +621,25 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => const OCRScannerScreen(),
+        builder: (context) => ItemOCRScannerScreen(
+          selectedItem: item,
+          onBatchSubmitted: (String selectedBatch) {
+            // Handle batch submission
+            final sessionProvider = Provider.of<SessionProvider>(context, listen: false);
+            sessionProvider.submitItemWithBatch(item, selectedBatch);
+            
+            // Switch to submitted items tab
+            _tabController?.animateTo(1);
+            
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('${item.itemName} submitted successfully with batch $selectedBatch!'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          },
+        ),
       ),
-    ).then((result) {
-      if (result != null && result is Map<String, dynamic>) {
-        final selectedBatch = result['selectedBatch'] as String?;
-        if (selectedBatch != null) {
-          // Mark item as submitted and move to submitted tab
-          final sessionProvider = Provider.of<SessionProvider>(context, listen: false);
-          sessionProvider.submitItemWithBatch(item, selectedBatch);
-          
-          // Switch to submitted items tab
-          _tabController?.animateTo(1);
-          
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('${item.itemName} submitted successfully with batch $selectedBatch!'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
-      }
-    });
+    );
   }
 }
