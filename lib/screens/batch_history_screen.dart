@@ -5,7 +5,7 @@ import '../models/rack_model.dart';
 import '../widgets/loading_widget.dart';
 import '../widgets/error_widget.dart';
 import '../utils/app_colors.dart';
-import 'item_ocr_scanner_screen.dart';
+import 'ocr_scanner_screen.dart';
 
 class BatchHistoryScreen extends StatefulWidget {
   const BatchHistoryScreen({super.key});
@@ -339,28 +339,30 @@ class _BatchHistoryScreenState extends State<BatchHistoryScreen> {
   }
 
   void _openOCRScanner(ItemModel item) {
-    // Navigate to item-specific OCR scanner
+    // Navigate to OCR scanner
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => ItemOCRScannerScreen(
-          selectedItem: item,
-          onBatchSubmitted: (String selectedBatch) {
-            // Handle batch submission
-            final sessionProvider = Provider.of<SessionProvider>(context, listen: false);
-            sessionProvider.submitItemWithBatch(item, selectedBatch);
-            
-            // Show success message
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('${item.itemName} submitted successfully with batch $selectedBatch!'),
-                backgroundColor: Colors.green,
-              ),
-            );
-          },
-        ),
+        builder: (context) => const OCRScannerScreen(),
       ),
-    );
+    ).then((result) {
+      if (result != null && result is Map<String, dynamic>) {
+        final selectedBatch = result['selectedBatch'] as String?;
+        if (selectedBatch != null) {
+          // Handle batch submission
+          final sessionProvider = Provider.of<SessionProvider>(context, listen: false);
+          sessionProvider.submitItemWithBatch(item, selectedBatch);
+          
+          // Show success message
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('${item.itemName} submitted successfully with batch $selectedBatch!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      }
+    });
   }
 
   void _showItemDetails(ItemModel item, SessionProvider sessionProvider) {

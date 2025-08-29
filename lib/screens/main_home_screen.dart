@@ -4,7 +4,7 @@ import '../providers/app_state_provider.dart';
 import '../providers/logging_provider.dart';
 import '../providers/session_provider.dart';
 import '../screens/qr_scanner_screen.dart';
-import '../screens/item_ocr_scanner_screen.dart';
+import '../screens/ocr_scanner_screen.dart';
 import '../screens/log_viewer_screen.dart';
 import '../screens/settings_screen.dart';
 import '../utils/app_colors.dart';
@@ -621,25 +621,27 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => ItemOCRScannerScreen(
-          selectedItem: item,
-          onBatchSubmitted: (String selectedBatch) {
-            // Handle batch submission
-            final sessionProvider = Provider.of<SessionProvider>(context, listen: false);
-            sessionProvider.submitItemWithBatch(item, selectedBatch);
-            
-            // Switch to submitted items tab
-            _tabController?.animateTo(1);
-            
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('${item.itemName} submitted successfully with batch $selectedBatch!'),
-                backgroundColor: Colors.green,
-              ),
-            );
-          },
-        ),
+        builder: (context) => const OCRScannerScreen(),
       ),
-    );
+    ).then((result) {
+      if (result != null && result is Map<String, dynamic>) {
+        final selectedBatch = result['selectedBatch'] as String?;
+        if (selectedBatch != null) {
+          // Mark item as submitted and move to submitted tab
+          final sessionProvider = Provider.of<SessionProvider>(context, listen: false);
+          sessionProvider.submitItemWithBatch(item, selectedBatch);
+          
+          // Switch to submitted items tab
+          _tabController?.animateTo(1);
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('${item.itemName} submitted successfully with batch $selectedBatch!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      }
+    });
   }
 }
