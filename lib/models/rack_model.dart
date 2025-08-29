@@ -74,11 +74,15 @@ class ItemModel {
   final String itemName;
   final int quantity;
   final List<BatchInfo> batches;
+  final String? selectedBatch;
+  final bool isSubmitted;
 
   ItemModel({
     required this.itemName,
     required this.quantity,
     required this.batches,
+    this.selectedBatch,
+    this.isSubmitted = false,
   });
 
   // Factory constructor from JSON
@@ -89,6 +93,8 @@ class ItemModel {
       batches: (json['batches'] as List<dynamic>?)
           ?.map((batch) => BatchInfo.fromJson(batch))
           .toList() ?? [],
+      selectedBatch: json['selectedBatch'],
+      isSubmitted: json['isSubmitted'] ?? false,
     );
   }
 
@@ -98,7 +104,26 @@ class ItemModel {
       'itemName': itemName,
       'quantity': quantity,
       'batches': batches.map((batch) => batch.toJson()).toList(),
+      'selectedBatch': selectedBatch,
+      'isSubmitted': isSubmitted,
     };
+  }
+
+  // Copy with method
+  ItemModel copyWith({
+    String? itemName,
+    int? quantity,
+    List<BatchInfo>? batches,
+    String? selectedBatch,
+    bool? isSubmitted,
+  }) {
+    return ItemModel(
+      itemName: itemName ?? this.itemName,
+      quantity: quantity ?? this.quantity,
+      batches: batches ?? this.batches,
+      selectedBatch: selectedBatch ?? this.selectedBatch,
+      isSubmitted: isSubmitted ?? this.isSubmitted,
+    );
   }
 
   // Get batch numbers for matching
@@ -140,7 +165,7 @@ class ItemModel {
 
   @override
   String toString() {
-    return 'ItemModel(itemName: $itemName, quantity: $quantity, batches: ${batches.length})';
+    return 'ItemModel(itemName: $itemName, quantity: $quantity, batches: ${batches.length}, isSubmitted: $isSubmitted)';
   }
 }
 

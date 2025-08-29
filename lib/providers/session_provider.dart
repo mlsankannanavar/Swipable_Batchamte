@@ -195,6 +195,44 @@ class SessionProvider extends ChangeNotifier {
     }
   }
 
+  // Submit an item with selected batch (move from available to submitted)
+  Future<void> submitItemWithBatch(ItemModel item, String selectedBatch) async {
+    if (_currentSession == null || _selectedRackName == null) {
+      _logger.logWarning('Cannot submit item - no session or rack selected');
+      return;
+    }
+
+    try {
+      // Create a copy of the item with the selected batch
+      final updatedItem = item.copyWith(
+        selectedBatch: selectedBatch,
+        isSubmitted: true,
+      );
+      
+      // Update the session model
+      _currentSession = _currentSession!.submitItemInRack(_selectedRackName!, updatedItem);
+      
+      // Save updated session to local storage
+      await _saveSessionToLocal();
+      
+      _logger.logApp('Item submitted with batch successfully',
+          level: LogLevel.success,
+          data: {
+            'itemName': item.itemName,
+            'selectedBatch': selectedBatch,
+            'rackName': _selectedRackName,
+            'sessionId': _currentSession!.sessionId,
+          });
+      
+      notifyListeners();
+    } catch (e, stackTrace) {
+      _logger.logError('Failed to submit item: ${item.itemName} in rack $_selectedRackName',
+          error: e,
+          stackTrace: stackTrace);
+      rethrow;
+    }
+  }
+
   // Get item by name from selected rack
   ItemModel? getItemByName(String itemName) {
     return selectedRack?.items.firstWhere(

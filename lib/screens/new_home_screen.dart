@@ -19,27 +19,18 @@ class NewHomeScreen extends StatefulWidget {
 }
 
 class _NewHomeScreenState extends State<NewHomeScreen> with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-  int _selectedIndex = 0;
+  TabController? _tabController;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-    _tabController.addListener(_handleTabChange);
     _initializeApp();
   }
 
   @override
   void dispose() {
-    _tabController.dispose();
+    _tabController?.dispose();
     super.dispose();
-  }
-
-  void _handleTabChange() {
-    setState(() {
-      _selectedIndex = _tabController.index;
-    });
   }
 
   void _initializeApp() {
@@ -161,15 +152,13 @@ class _NewHomeScreenState extends State<NewHomeScreen> with SingleTickerProvider
         ],
       ),
       // Bottom edge logs button (alternative to kebab menu)
-      floatingActionButton: _selectedIndex == 0 
-          ? FloatingActionButton.small(
-              onPressed: () => _navigateToLogs(),
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              tooltip: 'View Logs',
-              child: const Icon(Icons.receipt_long, size: 20),
-            )
-          : null,
+      floatingActionButton: FloatingActionButton.small(
+          onPressed: () => _navigateToLogs(),
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
+          tooltip: 'View Logs',
+          child: const Icon(Icons.receipt_long, size: 20),
+        ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
@@ -335,7 +324,7 @@ class _NewHomeScreenState extends State<NewHomeScreen> with SingleTickerProvider
             width: double.infinity,
             child: ElevatedButton(
               onPressed: () {
-                _tabController.animateTo(1); // Switch to Batch History tab
+                _tabController?.animateTo(1); // Switch to Batch History tab
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.green.shade600,
@@ -385,7 +374,7 @@ class _NewHomeScreenState extends State<NewHomeScreen> with SingleTickerProvider
           const SizedBox(height: 32),
           ElevatedButton.icon(
             onPressed: () {
-              _tabController.animateTo(0); // Switch to QR Scanner tab
+              _tabController?.animateTo(0); // Switch to QR Scanner tab
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,

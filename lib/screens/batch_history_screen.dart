@@ -291,6 +291,12 @@ class _BatchHistoryScreenState extends State<BatchHistoryScreen> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
+                    )
+                  else
+                    Icon(
+                      Icons.camera_alt,
+                      color: AppColors.primary,
+                      size: 20,
                     ),
                 ],
               ),
@@ -329,22 +335,6 @@ class _BatchHistoryScreenState extends State<BatchHistoryScreen> {
                       label: const Text('More'),
                     ),
                   ),
-                  
-                  const SizedBox(width: 12),
-                  
-                  // OCR Scan Button (only for available items)
-                  if (!isSubmitted)
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () => _openOCRScanner(item),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                        ),
-                        icon: const Icon(Icons.camera_alt, size: 16),
-                        label: const Text('Scan'),
-                      ),
-                    ),
                 ],
               ),
             ],
