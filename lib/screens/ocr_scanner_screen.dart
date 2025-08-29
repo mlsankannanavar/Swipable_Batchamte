@@ -7,6 +7,7 @@ import 'dart:io';
 import '../providers/logging_provider.dart';
 import '../providers/batch_provider.dart';
 import '../providers/session_provider.dart';
+import '../providers/app_state_provider.dart';
 import '../services/ocr_service.dart';
 import '../services/api_service.dart';
 import '../widgets/loading_widget.dart';
@@ -490,8 +491,42 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
   Widget build(BuildContext context) {
     return Consumer<SessionProvider>(
       builder: (context, sessionProvider, child) {
-        // Check if session exists before showing OCR scanner
-        if (!sessionProvider.hasSession) {
+        // Debug logging
+        final loggingProvider = Provider.of<LoggingProvider>(context, listen: false);
+        loggingProvider.logApp('OCR Scanner - hasSession: ${sessionProvider.hasSession}, sessionId: ${sessionProvider.currentSessionId}, loadingState: ${sessionProvider.loadingState}');
+        
+        // Check multiple conditions for a valid session
+        final sessionId = sessionProvider.currentSessionId;
+        final hasSession = sessionProvider.hasSession;
+        final isLoading = sessionProvider.isLoading;
+        
+        // If we're still loading, show loading screen
+        if (isLoading) {
+          return Scaffold(
+            appBar: _buildAppBar(),
+            body: const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('Loading session...'),
+                ],
+              ),
+            ),
+          );
+        }
+        
+        // Since user can click on items and reach OCR scanner, session must be available
+        // Only show "no session" if we absolutely have no session data at all
+        final hasValidSession = hasSession || 
+                                (sessionId != null && sessionId.isNotEmpty) ||
+                                (sessionProvider.currentSession != null) ||
+                                (sessionProvider.loadingState == SessionLoadingState.loaded);
+        
+        // If user somehow reaches this screen, assume session is valid unless proven otherwise
+        // This prevents false negatives when session exists but state is inconsistent
+        if (!hasValidSession && sessionProvider.loadingState == SessionLoadingState.idle) {
           return Scaffold(
             appBar: AppBar(
               title: const Text('OCR Scanner'),
@@ -541,6 +576,30 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
                       ),
                     ),
                   ),
+                  const SizedBox(height: 16),
+                  // Debug information
+                  if (sessionId != null && sessionId.isNotEmpty)
+                    Container(
+                      margin: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.shade100,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Column(
+                        children: [
+                          Text('Debug: Session ID exists: $sessionId'),
+                          Text('Debug: hasSession: $hasSession'),
+                          ElevatedButton(
+                            onPressed: () {
+                              // Try to refresh the session
+                              sessionProvider.retryLoadSession();
+                            },
+                            child: const Text('Retry Session Load'),
+                          ),
+                        ],
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -559,27 +618,87 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
 
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
+      backgroundColor: Colors.black,
+      foregroundColor: Colors.white,
+      elevation: 0,
+      titleSpacing: 0,
       title: Consumer<SessionProvider>(
         builder: (context, sessionProvider, child) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          return Row(
             children: [
-              const Text('OCR Scanner'),
-              if (sessionProvider.hasSession)
-                Text(
-                  'Session: ${sessionProvider.currentSessionId}',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.normal,
+              // Left side - BatchMate title
+              const Expanded(
+                flex: 2,
+                child: Text(
+                  'BatchMate',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
+              ),
+              // Center - Session ID
+              Expanded(
+                flex: 3,
+                child: Center(
+                  child: sessionProvider.hasSession || sessionProvider.currentSessionId != null
+                      ? Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.green.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.green.shade300),
+                          ),
+                          child: Text(
+                            '${sessionProvider.currentSessionId ?? 'N/A'}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.green,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        )
+                      : const Text(
+                          'No Session',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.orange,
+                          ),
+                        ),
+                ),
+              ),
+              // Right side - Connection status
+              Expanded(
+                flex: 2,
+                child: Consumer<AppStateProvider>(
+                  builder: (context, appStateProvider, child) {
+                    final isConnected = appStateProvider.connectionStatus == ConnectionStatus.connected;
+                    return Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Icon(
+                          isConnected ? Icons.wifi : Icons.wifi_off,
+                          size: 16,
+                          color: isConnected ? Colors.green : Colors.red,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          isConnected ? 'Online' : 'Offline',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: isConnected ? Colors.green : Colors.red,
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
             ],
           );
         },
       ),
-      backgroundColor: Colors.black,
-      foregroundColor: Colors.white,
-      elevation: 0,
       actions: [
         if (_isCameraInitialized) ...[
           IconButton(
