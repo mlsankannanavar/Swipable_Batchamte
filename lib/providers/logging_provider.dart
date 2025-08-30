@@ -285,10 +285,12 @@ class LoggingProvider extends ChangeNotifier {
   // Settings getters/setters
   bool _isDetailedLoggingEnabled = true;
   bool _isAutoExportEnabled = false;
+  bool _showDetailedLogMenu = false;
   final int _logRetentionDays = 30;
 
   bool get isDetailedLoggingEnabled => _isDetailedLoggingEnabled;
   bool get isAutoExportEnabled => _isAutoExportEnabled;
+  bool get showDetailedLogMenu => _showDetailedLogMenu;
   int get logRetentionDays => _logRetentionDays;
   int get totalLogsCount => logs.length;
 
@@ -299,6 +301,11 @@ class LoggingProvider extends ChangeNotifier {
 
   void setAutoExport(bool enabled) {
     _isAutoExportEnabled = enabled;
+    notifyListeners();
+  }
+
+  void setShowDetailedLogMenu(bool enabled) {
+    _showDetailedLogMenu = enabled;
     notifyListeners();
   }
 

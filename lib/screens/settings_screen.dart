@@ -233,6 +233,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 secondary: const Icon(Icons.upload),
               ),
               const Divider(height: 1),
+              SwitchListTile(
+                title: const Text('Show Detailed Log Menu'),
+                subtitle: const Text('Show detailed log viewer option in OCR scanner'),
+                value: loggingProvider.showDetailedLogMenu,
+                onChanged: (value) {
+                  loggingProvider.setShowDetailedLogMenu(value);
+                  _logSettingChange('Show Detailed Log Menu', value);
+                },
+                secondary: const Icon(Icons.menu),
+              ),
+              const Divider(height: 1),
               ListTile(
                 title: const Text('Log retention'),
                 subtitle: Text('Keep logs for ${loggingProvider.logRetentionDays} days'),

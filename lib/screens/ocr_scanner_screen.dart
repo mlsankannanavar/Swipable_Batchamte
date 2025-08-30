@@ -8,15 +8,19 @@ import '../providers/logging_provider.dart';
 import '../providers/batch_provider.dart';
 import '../providers/session_provider.dart';
 import '../providers/app_state_provider.dart';
+import '../screens/detailed_log_viewer_screen.dart';
 import '../services/ocr_service.dart';
 import '../services/api_service.dart';
 import '../widgets/loading_widget.dart';
 import '../widgets/swipeable_batch_match_cards.dart';
 import '../models/batch_match_model.dart';
+import '../models/rack_model.dart';
 import '../utils/app_colors.dart';
 
 class OCRScannerScreen extends StatefulWidget {
-  const OCRScannerScreen({super.key});
+  final ItemModel? selectedItem;
+
+  const OCRScannerScreen({super.key, this.selectedItem});
 
   @override
   State<OCRScannerScreen> createState() => _OCRScannerScreenState();
@@ -123,14 +127,15 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
     final loggingProvider = Provider.of<LoggingProvider>(context, listen: false);
     
     try {
-      // Check if we have an active session
-      if (!sessionProvider.hasSession) {
-        _showSimpleErrorDialog('No Active Session', 'Please scan a QR code first to load session data.');
+      // REMOVED SESSION CHECK - Always proceed if we reach this screen
+      
+      // Get all batches from all items in the current session
+      final session = sessionProvider.currentSession;
+      if (session == null) {
+        _showSimpleErrorDialog('Session Data', 'Session data is temporarily unavailable.');
         return;
       }
-
-      // Get all batches from all items in the current session
-      final session = sessionProvider.currentSession!;
+      
       final allBatches = <Map<String, dynamic>>[];
       
       for (final rack in session.racks) {
@@ -615,15 +620,31 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
         builder: (context, sessionProvider, child) {
           return Row(
             children: [
-              // Left side - BatchMate title
-              const Expanded(
+              // Left side - BatchMate title with selected item info
+              Expanded(
                 flex: 2,
-                child: Text(
-                  'BatchMate',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'BatchMate',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    if (widget.selectedItem != null)
+                      Text(
+                        widget.selectedItem!.itemName,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.green,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                  ],
                 ),
               ),
               // Center - Session ID
@@ -701,6 +722,56 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
             tooltip: _capturedImagePath != null ? 'Retake' : 'Capture',
           ),
         ],
+        // Kebab menu with detailed log viewer option
+        Consumer<LoggingProvider>(
+          builder: (context, loggingProvider, child) {
+            return PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert),
+              onSelected: (String value) {
+                switch (value) {
+                  case 'detailed_logs':
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const DetailedLogViewerScreen(),
+                      ),
+                    );
+                    break;
+                }
+              },
+              itemBuilder: (BuildContext context) {
+                final List<PopupMenuEntry<String>> items = [];
+                
+                // Only show detailed log option if enabled in settings
+                if (loggingProvider.showDetailedLogMenu) {
+                  items.add(
+                    const PopupMenuItem<String>(
+                      value: 'detailed_logs',
+                      child: Row(
+                        children: [
+                          Icon(Icons.article_outlined),
+                          SizedBox(width: 8),
+                          Text('Detailed Logs'),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+                
+                // If no items to show, return a disabled item
+                if (items.isEmpty) {
+                  return [
+                    const PopupMenuItem<String>(
+                      enabled: false,
+                      child: Text('No menu options available'),
+                    ),
+                  ];
+                }
+                
+                return items;
+              },
+            );
+          },
+        ),
       ],
     );
   }
@@ -714,7 +785,60 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
       return _buildCapturedImageView();
     }
 
-    return _buildCameraPreview();
+    return Column(
+      children: [
+        // Selected item indicator (if item is selected)
+        if (widget.selectedItem != null)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.9),
+              borderRadius: const BorderRadius.only(
+                bottomLeft: Radius.circular(12),
+                bottomRight: Radius.circular(12),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.medical_services, color: Colors.white, size: 18),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Scanning for:',
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  widget.selectedItem!.itemName,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                if (widget.selectedItem!.batches.isNotEmpty)
+                  Text(
+                    '${widget.selectedItem!.batches.length} batches available',
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 12,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        // Camera preview
+        Expanded(child: _buildCameraPreview()),
+      ],
+    );
   }
 
   Widget _buildCameraError() {
@@ -1109,10 +1233,7 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
       return;
     }
 
-    if (!batchProvider.hasSession) {
-      _showInfoDialog('No active session. Please scan a QR code first.');
-      return;
-    }
+    // REMOVED SESSION CHECK - Always proceed if we reach this screen
 
     try {
       setState(() {
@@ -1130,12 +1251,39 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
         }
       }
 
+      // Filter batches based on selected item (if provided)
+      List<dynamic> availableBatches;
+      if (widget.selectedItem != null) {
+        // Filter batches for the specific selected item only
+        final selectedItemName = widget.selectedItem!.itemName.toLowerCase();
+        availableBatches = batchProvider.batches.where((batch) {
+          final batchItemName = (batch.itemName ?? batch.productName ?? '').toLowerCase();
+          return batchItemName == selectedItemName;
+        }).toList();
+        
+        loggingProvider.logApp(
+          'Filtered batches for selected item: ${widget.selectedItem!.itemName}',
+          data: {
+            'selectedItem': widget.selectedItem!.itemName,
+            'totalBatchesInSession': batchProvider.batches.length,
+            'filteredBatchesForItem': availableBatches.length,
+          }
+        );
+      } else {
+        // Use all batches if no specific item selected (fallback behavior)
+        availableBatches = batchProvider.batches;
+        loggingProvider.logApp(
+          'No specific item selected, using all session batches',
+          data: {'totalBatches': availableBatches.length}
+        );
+      }
+
       // Start timing OCR processing
       final ocrStopwatch = Stopwatch()..start();
       
-      // Use the new auto-matching method
+      // Use the new auto-matching method with filtered batches
       final result = await _ocrService.captureAndExtractTextWithMatching(
-        availableBatches: batchProvider.batches,
+        availableBatches: availableBatches,
         similarityThreshold: 0.75,
       );
       
@@ -1162,6 +1310,9 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
         'matchesFound': matches.length,
         'nearestMatches': nearestMatches.length,
         'ocrProcessingTimeMs': _ocrProcessingTime?.inMilliseconds,
+        'batchesConsidered': availableBatches.length,
+        'selectedItem': widget.selectedItem?.itemName ?? 'None',
+        'itemSpecificFiltering': widget.selectedItem != null,
       });
 
       batchProvider.incrementScanCount();

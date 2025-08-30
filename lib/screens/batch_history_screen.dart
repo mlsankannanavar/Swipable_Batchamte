@@ -343,7 +343,7 @@ class _BatchHistoryScreenState extends State<BatchHistoryScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => const OCRScannerScreen(),
+        builder: (context) => OCRScannerScreen(selectedItem: item),
       ),
     ).then((result) {
       if (result != null && result is Map<String, dynamic>) {
