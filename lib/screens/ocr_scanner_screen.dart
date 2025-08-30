@@ -368,6 +368,7 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
     required List<String> alternativeMatches,
   }) async {
     final batchProvider = Provider.of<BatchProvider>(context, listen: false);
+    final sessionProvider = Provider.of<SessionProvider>(context, listen: false);
     final loggingProvider = Provider.of<LoggingProvider>(context, listen: false);
     final apiService = ApiService();
     
@@ -375,7 +376,7 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
     final totalProcessingStopwatch = Stopwatch()..start();
     
     try {
-      final sessionId = batchProvider.currentSessionId!;
+      final sessionId = sessionProvider.currentSession?.sessionId ?? '';
       final captureId = DateTime.now().millisecondsSinceEpoch.toString();
       final submitTimestamp = DateTime.now().millisecondsSinceEpoch;
       
