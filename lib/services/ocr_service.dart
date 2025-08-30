@@ -1216,7 +1216,7 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
       // Combined score (weighted: batch 70%, expiry 30%)
       final combinedScore = (batchSimilarity * 0.7) + (expiryScore * 0.3);
       
-      if (combinedScore >= 0.3) { // Lower threshold to get more candidates
+      if (combinedScore >= 0.76) { // Higher threshold for more precise matching (>75%)
         // Find requested quantity from remNumbers using intelligent matching
         int requestedQuantity = 0;
         String? matchedItemCode;
