@@ -16,6 +16,7 @@ import '../widgets/loading_widget.dart';
 import '../widgets/swipeable_batch_match_cards.dart';
 import '../models/batch_submission_detail_model.dart';
 import '../models/batch_match_model.dart';
+import '../models/batch_model.dart';
 import '../models/rack_model.dart';
 import '../utils/app_colors.dart';
 
@@ -160,8 +161,10 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
         return;
       }
 
-      // Convert to BatchMatch objects
+      // Convert to BatchMatch objects and create batch data map
       final batchMatches = <BatchMatch>[];
+      final batchDataMap = <String, Map<String, dynamic>>{};
+      
       for (int i = 0; i < matchResults.length; i++) {
         final result = matchResults[i];
         final batch = result['batch']; // Access the nested batch object
@@ -178,11 +181,24 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
           itemName = (batch['itemName'] ?? batch['item_name'] ?? batch['productName'] ?? batch['product_name'] ?? '').toString();
           expiryDate = (batch['expiryDate'] ?? batch['expiry_date'] ?? '').toString();
           quantity = (batch['quantity'] ?? 0) as int;
+          
+          // Store the original batch data for submission
+          batchDataMap[batchNumber] = batch;
         } else {
           // Handle BatchModel object
           batchNumber = batch?.batchNumber ?? batch?.batchId ?? '';
           itemName = batch?.itemName ?? batch?.productName ?? '';
           expiryDate = batch?.expiryDate ?? '';
+          
+          // Convert BatchModel to Map for consistency
+          batchDataMap[batchNumber] = {
+            'batchId': batch?.batchId,
+            'batchNumber': batchNumber,
+            'itemName': itemName,
+            'productName': batch?.productName,
+            'expiryDate': expiryDate,
+            'quantity': batch?.quantity ?? 0,
+          };
         }
         
         batchMatches.add(BatchMatch(
@@ -207,7 +223,7 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
           matches: batchMatches,
           onSubmit: (batchMatch, quantity) async {
             Navigator.pop(context); // Close the modal
-            await _handleBatchSubmission(batchMatch, quantity, extractedText);
+            await _handleBatchSubmission(batchMatch, quantity, extractedText, batchDataMap);
           },
           onRetake: () {
             Navigator.pop(context); // Close the modal
@@ -243,7 +259,12 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
   }
 
   /// Handle batch submission from swipeable cards
-  Future<void> _handleBatchSubmission(BatchMatch batchMatch, int quantity, String extractedText) async {
+  Future<void> _handleBatchSubmission(
+    BatchMatch batchMatch, 
+    int quantity, 
+    String extractedText,
+    [Map<String, Map<String, dynamic>>? batchDataMap]
+  ) async {
     final loggingProvider = Provider.of<LoggingProvider>(context, listen: false);
     final batchProvider = Provider.of<BatchProvider>(context, listen: false);
 
@@ -258,9 +279,47 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
       );
 
       // Create a BatchModel object from BatchMatch for submission
-      final batchForSubmission = batchProvider.batches.firstWhere(
-        (batch) => (batch.batchNumber ?? batch.batchId) == batchMatch.batchNumber,
-      );
+      BatchModel? batchForSubmission;
+      final sessionProvider = Provider.of<SessionProvider>(context, listen: false);
+      final sessionId = sessionProvider.currentSession?.sessionId ?? '';
+      
+      // First try to use the provided batch data map
+      if (batchDataMap != null && batchDataMap.containsKey(batchMatch.batchNumber)) {
+        final batchData = batchDataMap[batchMatch.batchNumber]!;
+        batchForSubmission = BatchModel(
+          batchId: batchData['batchId'] ?? batchMatch.batchNumber,
+          sessionId: sessionId,
+          batchNumber: batchData['batchNumber'] ?? batchMatch.batchNumber,
+          itemName: batchData['itemName'] ?? batchMatch.itemName,
+          productName: batchData['productName'] ?? batchMatch.itemName,
+          expiryDate: batchData['expiryDate'] ?? batchMatch.expiryDate,
+        );
+      } else {
+        // Fallback to searching in batchProvider.batches
+        try {
+          batchForSubmission = batchProvider.batches.firstWhere(
+            (batch) => (batch.batchNumber ?? batch.batchId) == batchMatch.batchNumber,
+          );
+        } catch (e) {
+          // If not found, try to find by batch ID
+          try {
+            batchForSubmission = batchProvider.batches.firstWhere(
+              (batch) => batch.batchId == batchMatch.batchNumber,
+            );
+          } catch (e2) {
+            // If still not found, try case-insensitive search
+            final foundBatches = batchProvider.batches.where(
+              (batch) => (batch.batchNumber?.toLowerCase() ?? batch.batchId.toLowerCase()) 
+                        == batchMatch.batchNumber.toLowerCase(),
+            );
+            batchForSubmission = foundBatches.isNotEmpty ? foundBatches.first : null;
+          }
+        }
+      }
+      
+      if (batchForSubmission == null) {
+        throw Exception('Batch not found in available batches: ${batchMatch.batchNumber}');
+      }
 
       // Submit the batch
       await _submitBatch(
@@ -370,6 +429,10 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
         batchProvider.incrementSuccessCount();
         
         // Add to submitted batches with comprehensive data
+        final sessionProvider = Provider.of<SessionProvider>(context, listen: false);
+        final currentSession = sessionProvider.currentSession;
+        final selectedRackName = sessionProvider.selectedRackName;
+        
         final submissionDetail = BatchSubmissionDetail(
           submissionId: DateTime.now().millisecondsSinceEpoch.toString(),
           sessionId: sessionId,
@@ -379,6 +442,10 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
           expiryDate: batch.expiryDate,
           requestedQuantity: widget.selectedItem?.quantity ?? 0,
           submittedQuantity: quantity,
+          rackName: selectedRackName,
+          rackLocation: currentSession?.racks
+              .where((rack) => rack.rackName == selectedRackName)
+              .firstOrNull?.rackName,
           extractedText: extractedText,
           capturedImage: _lastCapturedImageBytes != null ? Uint8List.fromList(_lastCapturedImageBytes!) : null,
           ocrConfidence: confidence,

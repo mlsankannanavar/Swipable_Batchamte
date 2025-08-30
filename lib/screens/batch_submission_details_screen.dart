@@ -794,6 +794,10 @@ class ComprehensiveSubmissionDetailsScreen extends StatelessWidget {
       children: [
         _buildInfoRow('Item Name', submissionDetail.itemName),
         _buildInfoRow('Batch Number', submissionDetail.batchNumber),
+        if (submissionDetail.rackName != null)
+          _buildInfoRow('Rack Name', submissionDetail.rackName!),
+        if (submissionDetail.rackLocation != null)
+          _buildInfoRow('Rack Location', submissionDetail.rackLocation!),
         if (submissionDetail.expiryDate != null)
           _buildInfoRow('Expiry Date', submissionDetail.expiryDate!),
         _buildInfoRow('Requested Quantity', '${submissionDetail.requestedQuantity}'),

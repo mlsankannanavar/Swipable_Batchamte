@@ -438,18 +438,95 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
   }
 
   Widget _buildSubmittedItemsScreen(SessionProvider sessionProvider) {
+    final session = sessionProvider.currentSession;
+    if (session == null) return const Center(child: Text('No session data'));
+
     return Column(
       children: [
-        // Header
+        // Rack Dropdown (same as Available Items)
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.all(16.0),
-          child: Text(
-            'Submitted Items',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: AppColors.primary,
+          margin: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12.0),
+            border: Border.all(
+              color: Colors.grey.shade300,
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.1),
+                spreadRadius: 1,
+                blurRadius: 6,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: _selectedRackId,
+              hint: Row(
+                children: [
+                  Icon(Icons.inventory_2_outlined, 
+                      color: Colors.grey.shade600, size: 20),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Select Rack', 
+                    style: TextStyle(
+                      color: Colors.grey.shade600,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+              isExpanded: true,
+              icon: Icon(
+                Icons.keyboard_arrow_down,
+                color: AppColors.primary,
+                size: 24,
+              ),
+              items: session.racks.map((rack) {
+                return DropdownMenuItem<String>(
+                  value: rack.rackName,
+                  child: Row(
+                    children: [
+                      Icon(Icons.inventory_2, 
+                          color: AppColors.primary, size: 20),
+                      const SizedBox(width: 12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            rack.rackName,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 16,
+                            ),
+                          ),
+                          Text(
+                            '${rack.items.length} items',
+                            style: TextStyle(
+                              color: Colors.grey.shade600,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+              onChanged: (String? value) {
+                if (value != null) {
+                  setState(() {
+                    _selectedRackId = value;
+                  });
+                }
+              },
             ),
           ),
         ),
@@ -470,20 +547,18 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
         ? session.racks.firstWhere((rack) => rack.rackName == _selectedRackId) 
         : null;
 
-    if (!showSubmitted && selectedRack == null) {
-      return const Center(child: Text('No rack selected'));
+    // For both tabs, require a rack to be selected
+    if (selectedRack == null) {
+      return const Center(child: Text('Please select a rack to view items'));
     }
 
     List<dynamic> itemsToShow;
     if (showSubmitted) {
-      // Show all submitted items from all racks
-      itemsToShow = session.racks
-          .expand((rack) => rack.items)
-          .where((item) => item.isSubmitted)
-          .toList();
+      // Show submitted items from selected rack only
+      itemsToShow = selectedRack.items.where((item) => item.isSubmitted).toList();
     } else {
       // Show available items from selected rack
-      itemsToShow = selectedRack!.items.where((item) => !item.isSubmitted).toList();
+      itemsToShow = selectedRack.items.where((item) => !item.isSubmitted).toList();
     }
 
     if (itemsToShow.isEmpty) {
@@ -496,9 +571,11 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
               size: 80,
               color: Colors.grey.shade400,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(width: 16),
             Text(
-              showSubmitted ? 'No items submitted yet' : 'No available items',
+              showSubmitted 
+                ? 'No items submitted from ${selectedRack.rackName} yet' 
+                : 'No available items in ${selectedRack.rackName}',
               style: TextStyle(
                 fontSize: 18,
                 color: Colors.grey.shade600,

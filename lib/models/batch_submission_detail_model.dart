@@ -12,6 +12,8 @@ class BatchSubmissionDetail {
   final String? expiryDate;
   final int requestedQuantity;
   final int submittedQuantity;
+  final String? rackName; // Add rack information
+  final String? rackLocation; // Add rack location info
   
   // OCR and matching data
   final String extractedText;
@@ -50,6 +52,8 @@ class BatchSubmissionDetail {
     this.expiryDate,
     required this.requestedQuantity,
     required this.submittedQuantity,
+    this.rackName,
+    this.rackLocation,
     required this.extractedText,
     this.capturedImage,
     required this.ocrConfidence,
@@ -85,6 +89,8 @@ class BatchSubmissionDetail {
       expiryDate: json['expiryDate'],
       requestedQuantity: json['requestedQuantity'] ?? 0,
       submittedQuantity: json['submittedQuantity'] ?? 0,
+      rackName: json['rackName'],
+      rackLocation: json['rackLocation'],
       extractedText: json['extractedText'] ?? '',
       capturedImage: json['capturedImage'] != null 
           ? Uint8List.fromList(List<int>.from(json['capturedImage']))
@@ -123,6 +129,8 @@ class BatchSubmissionDetail {
       'expiryDate': expiryDate,
       'requestedQuantity': requestedQuantity,
       'submittedQuantity': submittedQuantity,
+      'rackName': rackName,
+      'rackLocation': rackLocation,
       'extractedText': extractedText,
       'capturedImage': capturedImage?.toList(),
       'ocrConfidence': ocrConfidence,
