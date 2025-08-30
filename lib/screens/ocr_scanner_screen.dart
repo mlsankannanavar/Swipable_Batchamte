@@ -3,6 +3,7 @@ import 'package:camera/camera.dart';
 import 'package:provider/provider.dart';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import '../providers/logging_provider.dart';
 import '../providers/batch_provider.dart';
@@ -13,6 +14,7 @@ import '../services/ocr_service.dart';
 import '../services/api_service.dart';
 import '../widgets/loading_widget.dart';
 import '../widgets/swipeable_batch_match_cards.dart';
+import '../models/batch_submission_detail_model.dart';
 import '../models/batch_match_model.dart';
 import '../models/rack_model.dart';
 import '../utils/app_colors.dart';
@@ -368,31 +370,36 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
         batchProvider.incrementSuccessCount();
         
         // Add to submitted batches with comprehensive data
-        await batchProvider.addSubmittedBatch(
+        final submissionDetail = BatchSubmissionDetail(
+          submissionId: DateTime.now().millisecondsSinceEpoch.toString(),
+          sessionId: sessionId,
+          submissionTimestamp: DateTime.now(),
           batchNumber: batch.batchNumber ?? batch.batchId ?? '',
           itemName: batch.itemName ?? batch.productName ?? 'Unknown Item',
-          quantity: quantity.toString(),
-          capturedImage: _lastCapturedImageBytes,
-          // Comprehensive tracking data
-          captureId: captureId,
+          expiryDate: batch.expiryDate,
+          requestedQuantity: widget.selectedItem?.quantity ?? 0,
+          submittedQuantity: quantity,
           extractedText: extractedText,
+          capturedImage: _lastCapturedImageBytes != null ? Uint8List.fromList(_lastCapturedImageBytes!) : null,
           ocrConfidence: confidence,
           matchType: matchType,
+          matchConfidence: confidence.toDouble(),
           matchedBatchId: batch.batchNumber ?? batch.batchId,
-          matchConfidence: confidence,
           ocrProcessingTimeMs: _ocrProcessingTime?.inMilliseconds ?? 0,
           batchMatchingTimeMs: _matchingProcessingTime?.inMilliseconds ?? 0,
           apiSubmissionTimeMs: apiSubmissionStopwatch.elapsed.inMilliseconds,
           totalProcessingTimeMs: totalProcessingStopwatch.elapsed.inMilliseconds,
-          apiResponseCode: resp.statusCode,
+          charactersDetected: extractedText.length,
+          apiPayload: requestData,
+          apiResponse: resp.data,
+          apiResponseCode: resp.statusCode ?? 0,
           apiEndpoint: '/api/submit-mobile-batch/$sessionId',
           dataSizeBytes: dataSizeBytes,
-          apiResponseTime: '${apiSubmissionStopwatch.elapsed.inMilliseconds} ms',
           submissionStatus: 'Completed Successfully',
-          charactersDetected: extractedText.length,
-          submissionDurationMs: apiSubmissionStopwatch.elapsed.inMilliseconds,
-          selectedFromOptions: matchType != 'manual' ? 'N/A' : 'N/A',
+          alternativeMatches: alternativeMatches,
         );
+        
+        await batchProvider.addSubmittedBatchDetail(submissionDetail);
         
         loggingProvider.logSuccess('Batch submitted successfully');
         _showSuccessDialog('Batch submitted successfully!');

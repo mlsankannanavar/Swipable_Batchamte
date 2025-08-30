@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:hive/hive.dart';
 import '../models/batch_model.dart';
+import '../models/batch_submission_detail_model.dart';
 import '../services/api_service.dart';
 import '../services/logging_service.dart';
 import '../utils/constants.dart';
@@ -798,6 +799,73 @@ class BatchProvider extends ChangeNotifier {
     }
     
     _logger.logApp('Batch submitted: $batchNumber');
+  }
+  
+  /// Add submitted batch with comprehensive details using new model
+  Future<void> addSubmittedBatchDetail(BatchSubmissionDetail submissionDetail) async {
+    // Convert to map format for existing storage system
+    final submittedBatch = {
+      'batchNumber': submissionDetail.batchNumber,
+      'itemName': submissionDetail.itemName,
+      'quantity': submissionDetail.submittedQuantity.toString(),
+      'capturedImage': submissionDetail.capturedImage?.toList(),
+      'submittedAt': submissionDetail.submissionTimestamp.toIso8601String(),
+      'sessionId': submissionDetail.sessionId,
+      'submissionDetail': submissionDetail.toJson(), // Store full detail as nested object
+      
+      // Quick access fields for compatibility
+      'apiSubmissionDetails': {
+        'captureId': submissionDetail.submissionId,
+        'selectedFromOptions': submissionDetail.matchType != 'manual' ? 'Yes' : 'No',
+        'submissionDurationMs': submissionDetail.apiSubmissionTimeMs,
+        'apiResponseCode': submissionDetail.apiResponseCode,
+      },
+      'performanceMetrics': {
+        'ocrProcessingTimeMs': submissionDetail.ocrProcessingTimeMs,
+        'batchMatchingTimeMs': submissionDetail.batchMatchingTimeMs,
+        'apiSubmissionTimeMs': submissionDetail.apiSubmissionTimeMs,
+        'totalProcessingTimeMs': submissionDetail.totalProcessingTimeMs,
+      },
+      'apiCommunicationDetails': {
+        'endpointUsed': submissionDetail.apiEndpoint,
+        'requestMethod': 'POST',
+        'responseStatus': submissionDetail.apiResponseCode,
+        'responseTimeMs': '${submissionDetail.apiSubmissionTimeMs} ms',
+        'dataSizeBytes': submissionDetail.dataSizeBytes,
+        'timestamp': submissionDetail.submissionTimestamp.toIso8601String(),
+      },
+      'ocrExtractionDetails': {
+        'extractedText': submissionDetail.extractedText,
+        'ocrConfidencePercent': submissionDetail.ocrConfidence,
+        'textProcessingTimeMs': submissionDetail.ocrProcessingTimeMs,
+        'charactersDetected': submissionDetail.charactersDetected,
+      },
+      'batchMatchingDetails': {
+        'matchType': submissionDetail.matchType,
+        'matchConfidencePercent': submissionDetail.matchConfidence,
+        'matchedBatchId': submissionDetail.matchedBatchId ?? 'N/A',
+        'matchingDurationMs': submissionDetail.batchMatchingTimeMs,
+      },
+      'submissionSummary': {
+        'product': submissionDetail.itemName,
+        'quantitySubmitted': submissionDetail.submittedQuantity.toString(),
+        'submissionStatus': submissionDetail.submissionStatus,
+      },
+    };
+    
+    _submittedBatches.add(submittedBatch);
+    notifyListeners();
+    
+    // Save to storage
+    if (_batchBox != null) {
+      final storageData = {
+        'batches': _submittedBatches.map((e) => Map<String, dynamic>.from(e)).toList(),
+        'lastUpdated': DateTime.now().toIso8601String(),
+      };
+      await _batchBox!.put('submitted_batches', storageData);
+    }
+    
+    _logger.logApp('Batch submitted with detailed tracking: ${submissionDetail.batchNumber}');
   }
   
   Future<void> loadSubmittedBatches() async {

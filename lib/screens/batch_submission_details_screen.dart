@@ -3,7 +3,9 @@ import 'package:provider/provider.dart';
 import '../providers/logging_provider.dart';
 import '../utils/app_colors.dart';
 import '../utils/helpers.dart';
+import '../models/batch_submission_detail_model.dart';
 import 'dart:typed_data';
+import 'dart:convert';
 
 class BatchSubmissionDetailsScreen extends StatefulWidget {
   final dynamic submittedBatch;
@@ -105,6 +107,23 @@ class _BatchSubmissionDetailsScreenState extends State<BatchSubmissionDetailsScr
             _buildInfoRow('Submission Status', 
               widget.submittedBatch['submissionSummary']?['submissionStatus'] ?? 'Completed Successfully'),
             _buildInfoRow('Submitted At', _formatDateTime(widget.submittedBatch['submittedAt'])),
+            
+            // More Details button if comprehensive data is available
+            if (_hasDetailedSubmission()) ...[
+              const SizedBox(height: 16),
+              Center(
+                child: ElevatedButton.icon(
+                  onPressed: _showComprehensiveDetails,
+                  icon: const Icon(Icons.info_outline),
+                  label: const Text('More Details'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -551,10 +570,495 @@ class _BatchSubmissionDetailsScreenState extends State<BatchSubmissionDetailsScr
     );
   }
 
+  /// Check if the submission has comprehensive detailed data
+  bool _hasDetailedSubmission() {
+    return widget.submittedBatch['submissionDetail'] != null;
+  }
+
+  /// Show comprehensive details screen with full data
+  void _showComprehensiveDetails() {
+    final submissionDetailData = widget.submittedBatch['submissionDetail'] as Map<String, dynamic>?;
+    
+    if (submissionDetailData == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Detailed data not available for this submission')),
+      );
+      return;
+    }
+    
+    try {
+      final submissionDetail = BatchSubmissionDetail.fromJson(submissionDetailData);
+      
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => ComprehensiveSubmissionDetailsScreen(
+            submissionDetail: submissionDetail,
+          ),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error loading detailed data: $e')),
+      );
+    }
+  }
+
   void _shareDetails() {
     // TODO: Implement sharing functionality
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Share functionality coming soon')),
+    );
+  }
+}
+
+/// Comprehensive submission details screen with full tracking data
+class ComprehensiveSubmissionDetailsScreen extends StatelessWidget {
+  final BatchSubmissionDetail submissionDetail;
+
+  const ComprehensiveSubmissionDetailsScreen({
+    Key? key,
+    required this.submissionDetail,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.grey[100],
+      appBar: AppBar(
+        title: const Text('Complete Submission Details'),
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.share),
+            onPressed: () => _shareDetails(context),
+          ),
+        ],
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Status Header
+            _buildStatusHeader(),
+            const SizedBox(height: 16),
+            
+            // Batch Information
+            _buildSectionCard(
+              'Batch Information',
+              Icons.inventory_2,
+              _buildBatchInfo(),
+            ),
+            const SizedBox(height: 16),
+            
+            // Captured Image
+            if (submissionDetail.capturedImage != null)
+              _buildSectionCard(
+                'Captured Image',
+                Icons.camera_alt,
+                _buildCapturedImage(context),
+              ),
+            const SizedBox(height: 16),
+            
+            // OCR Analysis
+            _buildSectionCard(
+              'OCR Analysis',
+              Icons.text_fields,
+              _buildOcrAnalysis(),
+            ),
+            const SizedBox(height: 16),
+            
+            // Batch Matching
+            _buildSectionCard(
+              'Batch Matching',
+              Icons.compare_arrows,
+              _buildMatchingDetails(),
+            ),
+            const SizedBox(height: 16),
+            
+            // Performance Metrics
+            _buildSectionCard(
+              'Performance Metrics',
+              Icons.speed,
+              _buildPerformanceMetrics(),
+            ),
+            const SizedBox(height: 16),
+            
+            // API Details
+            _buildSectionCard(
+              'API Submission',
+              Icons.cloud_upload,
+              _buildApiDetails(),
+            ),
+            const SizedBox(height: 16),
+            
+            // Raw Data (Expandable)
+            _buildRawDataSection(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusHeader() {
+    Color statusColor = Colors.green;
+    IconData statusIcon = Icons.check_circle;
+    
+    if (submissionDetail.submissionStatus.toLowerCase().contains('error') ||
+        submissionDetail.submissionStatus.toLowerCase().contains('failed')) {
+      statusColor = Colors.red;
+      statusIcon = Icons.error;
+    }
+
+    return Card(
+      elevation: 4,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          gradient: LinearGradient(
+            colors: [statusColor.withOpacity(0.1), Colors.white],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: Column(
+          children: [
+            Icon(statusIcon, size: 50, color: statusColor),
+            const SizedBox(height: 12),
+            Text(
+              submissionDetail.submissionStatus,
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: statusColor,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Batch: ${submissionDetail.batchNumber}',
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              submissionDetail.formattedSubmissionTime,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionCard(String title, IconData icon, Widget content) {
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, color: AppColors.primary),
+                const SizedBox(width: 8),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ],
+            ),
+            const Divider(),
+            content,
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBatchInfo() {
+    return Column(
+      children: [
+        _buildInfoRow('Item Name', submissionDetail.itemName),
+        _buildInfoRow('Batch Number', submissionDetail.batchNumber),
+        if (submissionDetail.expiryDate != null)
+          _buildInfoRow('Expiry Date', submissionDetail.expiryDate!),
+        _buildInfoRow('Requested Quantity', '${submissionDetail.requestedQuantity}'),
+        _buildInfoRow('Submitted Quantity', '${submissionDetail.submittedQuantity}'),
+        _buildInfoRow('Session ID', submissionDetail.sessionId),
+      ],
+    );
+  }
+
+  Widget _buildCapturedImage(BuildContext context) {
+    return GestureDetector(
+      onTap: () => _showFullScreenImage(context),
+      child: Container(
+        width: double.infinity,
+        constraints: const BoxConstraints(maxHeight: 300),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.grey[300]!),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: Image.memory(
+            submissionDetail.capturedImage!,
+            fit: BoxFit.contain,
+            errorBuilder: (context, error, stackTrace) {
+              return Container(
+                height: 200,
+                alignment: Alignment.center,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.broken_image, size: 50, color: Colors.grey[400]),
+                    const SizedBox(height: 8),
+                    Text('Failed to load image', style: TextStyle(color: Colors.grey[600])),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOcrAnalysis() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildInfoRow('OCR Confidence', '${submissionDetail.ocrConfidence}%'),
+        _buildInfoRow('Characters Detected', '${submissionDetail.charactersDetected}'),
+        _buildInfoRow('Processing Time', '${submissionDetail.ocrProcessingTimeMs} ms'),
+        const SizedBox(height: 12),
+        const Text(
+          'Extracted Text:',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.grey[100],
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey[300]!),
+          ),
+          child: SelectableText(
+            submissionDetail.extractedText.isNotEmpty 
+                ? submissionDetail.extractedText 
+                : 'No text extracted',
+            style: const TextStyle(
+              fontFamily: 'monospace',
+              fontSize: 12,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMatchingDetails() {
+    return Column(
+      children: [
+        _buildInfoRow('Match Type', _getMatchTypeDescription(submissionDetail.matchType)),
+        _buildInfoRow('Match Confidence', '${submissionDetail.matchConfidence.toStringAsFixed(1)}%'),
+        if (submissionDetail.matchedBatchId != null)
+          _buildInfoRow('Matched Batch ID', submissionDetail.matchedBatchId!),
+        _buildInfoRow('Matching Time', '${submissionDetail.batchMatchingTimeMs} ms'),
+      ],
+    );
+  }
+
+  Widget _buildPerformanceMetrics() {
+    return Column(
+      children: [
+        _buildInfoRow('OCR Processing', '${submissionDetail.ocrProcessingTimeMs} ms'),
+        _buildInfoRow('Batch Matching', '${submissionDetail.batchMatchingTimeMs} ms'),
+        _buildInfoRow('API Submission', '${submissionDetail.apiSubmissionTimeMs} ms'),
+        _buildInfoRow('Total Processing', '${submissionDetail.totalProcessingTimeMs} ms'),
+        _buildInfoRow('Data Size', '${(submissionDetail.dataSizeBytes / 1024).toStringAsFixed(2)} KB'),
+      ],
+    );
+  }
+
+  Widget _buildApiDetails() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildInfoRow('Endpoint', submissionDetail.apiEndpoint),
+        _buildInfoRow('Response Code', '${submissionDetail.apiResponseCode}'),
+        _buildInfoRow('Response Time', '${submissionDetail.apiSubmissionTimeMs} ms'),
+        const SizedBox(height: 12),
+        
+        const Text(
+          'Request Payload:',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 8),
+        _buildJsonContainer(submissionDetail.apiPayload),
+        
+        if (submissionDetail.apiResponse != null) ...[
+          const SizedBox(height: 16),
+          const Text(
+            'API Response:',
+            style: TextStyle(fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 8),
+          _buildJsonContainer(submissionDetail.apiResponse!),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildRawDataSection() {
+    return Card(
+      elevation: 2,
+      child: ExpansionTile(
+        title: const Row(
+          children: [
+            Icon(Icons.data_object, color: AppColors.primary),
+            SizedBox(width: 8),
+            Text(
+              'Raw Data (JSON)',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppColors.primary,
+              ),
+            ),
+          ],
+        ),
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: _buildJsonContainer(submissionDetail.toJson()),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 130,
+            child: Text(
+              '$label:',
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ),
+          Expanded(
+            child: SelectableText(value),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildJsonContainer(Map<String, dynamic> jsonData) {
+    final prettyJson = const JsonEncoder.withIndent('  ').convert(jsonData);
+    
+    return Container(
+      width: double.infinity,
+      constraints: const BoxConstraints(maxHeight: 300),
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey[300]!),
+      ),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(12),
+        child: SelectableText(
+          prettyJson,
+          style: const TextStyle(
+            fontFamily: 'monospace',
+            fontSize: 10,
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _getMatchTypeDescription(String matchType) {
+    switch (matchType.toLowerCase()) {
+      case 'top_match':
+        return 'Top Match (Best)';
+      case 'alternative_match':
+        return 'Alternative Match';
+      case 'manual':
+        return 'Manual Selection';
+      case 'exact_match':
+        return 'Exact Match';
+      default:
+        return matchType;
+    }
+  }
+
+  void _showFullScreenImage(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => Scaffold(
+          backgroundColor: Colors.black,
+          appBar: AppBar(
+            title: const Text('Captured Image'),
+            backgroundColor: Colors.black,
+            foregroundColor: Colors.white,
+          ),
+          body: Center(
+            child: InteractiveViewer(
+              panEnabled: true,
+              boundaryMargin: const EdgeInsets.all(20),
+              minScale: 0.5,
+              maxScale: 4.0,
+              child: Image.memory(
+                submissionDetail.capturedImage!,
+                fit: BoxFit.contain,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _shareDetails(BuildContext context) {
+    final summary = '''
+Batch Submission Details
+========================
+Batch: ${submissionDetail.batchNumber}
+Item: ${submissionDetail.itemName}
+Status: ${submissionDetail.submissionStatus}
+Submitted: ${submissionDetail.formattedSubmissionTime}
+Quantity: ${submissionDetail.submittedQuantity}
+Confidence: ${submissionDetail.ocrConfidence}%
+Processing Time: ${submissionDetail.totalProcessingTimeMs}ms
+    ''';
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Details copied to clipboard'),
+        behavior: SnackBarBehavior.floating,
+      ),
     );
   }
 }
