@@ -269,14 +269,7 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
     final batchProvider = Provider.of<BatchProvider>(context, listen: false);
 
     try {
-      loggingProvider.logApp('Batch submitted from swipeable cards', 
-        data: {
-          'batchNumber': batchMatch.batchNumber,
-          'quantity': quantity,
-          'confidence': batchMatch.confidence,
-          'rank': batchMatch.rank,
-        }
-      );
+      loggingProvider.logApp('Batch submitted from swipeable cards: batchNumber=${batchMatch.batchNumber}, quantity=$quantity, confidence=${batchMatch.confidence}, rank=${batchMatch.rank}, batchDataMapKeys=${batchDataMap?.keys.toList() ?? []}, batchDataMapSize=${batchDataMap?.length ?? 0}');
 
       // Create a BatchModel object from BatchMatch for submission
       BatchModel? batchForSubmission;
@@ -318,6 +311,7 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
       }
       
       if (batchForSubmission == null) {
+        loggingProvider.logError('Batch lookup failed: searchedBatchNumber=${batchMatch.batchNumber}, batchDataMapContains=${batchDataMap?.containsKey(batchMatch.batchNumber) ?? false}, batchProviderBatchCount=${batchProvider.batches.length}');
         throw Exception('Batch not found in available batches: ${batchMatch.batchNumber}');
       }
 

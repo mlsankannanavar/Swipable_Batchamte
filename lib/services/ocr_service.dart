@@ -734,6 +734,15 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
   bool _searchBatchExpiryOptimized(String batchExpiryDate, String extractedText) {
     _logger.logOcr('OPTIMIZED_EXPIRY_SEARCH: Looking for expiry "$batchExpiryDate" in text');
     
+    // FIRST: Check for exact match (backend format as-is)
+    final normalizedText = extractedText.toUpperCase();
+    final normalizedExpiry = batchExpiryDate.toUpperCase();
+    
+    if (normalizedText.contains(normalizedExpiry)) {
+      _logger.logOcr('OPTIMIZED_EXPIRY_SEARCH: DIRECT EXACT MATCH found for "$batchExpiryDate"');
+      return true;
+    }
+    
     // Check cache first
     if (_dateFormatCache.containsKey(batchExpiryDate)) {
       final cachedFormats = _dateFormatCache[batchExpiryDate]!;
@@ -754,6 +763,9 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
   /// Search multiple date formats efficiently
   bool _searchFormatsInText(List<String> formats, String extractedText) {
     final normalizedText = extractedText.toUpperCase();
+    
+    _logger.logOcr('OPTIMIZED_EXPIRY_SEARCH: Searching in text: "${extractedText.substring(0, extractedText.length > 100 ? 100 : extractedText.length)}"...');
+    _logger.logOcr('OPTIMIZED_EXPIRY_SEARCH: Generated formats: ${formats.take(10).join(", ")}${formats.length > 10 ? "... (${formats.length} total)" : ""}');
     
     for (final format in formats) {
       final normalizedFormat = format.toUpperCase();
