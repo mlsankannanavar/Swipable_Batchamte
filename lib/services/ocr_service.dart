@@ -600,7 +600,20 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
     final wordSet = Set<String>.from(words);
 
     for (final batch in batches) {
-      final batchNumber = (batch.batchNumber ?? batch.batchId ?? '').toString().trim().toUpperCase();
+      // Handle both BatchModel objects and Map objects
+      String batchNumber;
+      String? expiryDate;
+      
+      if (batch is Map<String, dynamic>) {
+        // Handle Map format
+        batchNumber = (batch['batchNumber'] ?? batch['batch_number'] ?? batch['batchId'] ?? batch['batch_id'] ?? '').toString().trim().toUpperCase();
+        expiryDate = batch['expiryDate']?.toString() ?? batch['expiry_date']?.toString();
+      } else {
+        // Handle BatchModel object
+        batchNumber = (batch.batchNumber ?? batch.batchId ?? '').toString().trim().toUpperCase();
+        expiryDate = batch.expiryDate;
+      }
+      
       if (batchNumber.isEmpty) continue;
 
       // Step 1: Optimized batch number search
@@ -611,9 +624,9 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
         
         // Step 2: Optimized expiry date search
         bool expiryFound = false;
-        if (batch.expiryDate != null) {
-          expiryFound = _searchBatchExpiryOptimized(batch.expiryDate.toString(), extractedText);
-          _logger.logOcr('EXPIRY_CHECK: ${batch.expiryDate} ${expiryFound ? 'FOUND' : 'NOT FOUND'} in text');
+        if (expiryDate != null) {
+          expiryFound = _searchBatchExpiryOptimized(expiryDate.toString(), extractedText);
+          _logger.logOcr('EXPIRY_CHECK: ${expiryDate} ${expiryFound ? 'FOUND' : 'NOT FOUND'} in text');
         } else {
           // If no expiry date in batch, consider it valid
           expiryFound = true;
@@ -1299,16 +1312,6 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
     final index = allMatches.length % itemsWithRemNumbers.length;
     final selectedItem = itemsWithRemNumbers[index];
     return selectedItem['itemCode'] as String?;
-  }
-
-  /// Check if item name matches item code for cards (legacy method - kept for reference)
-  bool _isItemNameMatchForCards(String itemName, String itemCode) {
-    final normalizedItemName = itemName.toLowerCase();
-    final normalizedItemCode = itemCode.toLowerCase();
-    
-    // Simple contains check - you might need more sophisticated matching
-    return normalizedItemName.contains(normalizedItemCode) || 
-           normalizedItemCode.contains(normalizedItemName);
   }
 
   /// Calculate Levenshtein similarity for cards
