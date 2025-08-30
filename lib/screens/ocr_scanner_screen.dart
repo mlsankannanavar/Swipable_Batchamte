@@ -122,47 +122,29 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
   }
 
   /// Show swipeable batch match cards for top 5 matches
-  Future<void> _showSwipeableBatchMatchCards(String extractedText) async {
+  Future<void> _showSwipeableBatchMatchCards(String extractedText, List<Map<String, dynamic>> availableBatches) async {
     final sessionProvider = Provider.of<SessionProvider>(context, listen: false);
     final loggingProvider = Provider.of<LoggingProvider>(context, listen: false);
     
     try {
-      // REMOVED SESSION CHECK - Always proceed if we reach this screen
-      
-      // Get all batches from all items in the current session
+      // Get session details
       final session = sessionProvider.currentSession;
       if (session == null) {
         _showSimpleErrorDialog('Session Data', 'Session data is temporarily unavailable.');
         return;
       }
       
-      final allBatches = <Map<String, dynamic>>[];
-      
-      for (final rack in session.racks) {
-        for (final item in rack.items) {
-          for (final batch in item.batches) {
-            allBatches.add({
-              'batchNumber': batch.batchNumber,
-              'expiryDate': batch.expiryDate,
-              'itemName': item.itemName,
-              'quantity': item.quantity,
-              'rackName': rack.rackName,
-            });
-          }
-        }
-      }
-      
-      if (allBatches.isEmpty) {
-        _showSimpleErrorDialog('No batches available', 'No batch data found in the current session.');
+      if (availableBatches.isEmpty) {
+        _showSimpleErrorDialog('No batches available', 'No batch data found for the selected item.');
         return;
       }
 
-      loggingProvider.logApp('Found ${allBatches.length} batches across all items for matching');
+      loggingProvider.logApp('Using ${availableBatches.length} filtered batches for matching');
 
       // Find top 5 matches using the OCR service method
       final matchResults = _ocrService.findTop5BatchMatchesForCards(
         extractedText: extractedText,
-        batches: allBatches,
+        batches: availableBatches,
         sessionDetails: {
           'sessionId': session.sessionId,
           'storeId': session.storeId,
@@ -185,12 +167,14 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
         String batchNumber;
         String itemName;
         String expiryDate;
+        int quantity = 0; // Default quantity
         
         if (batch is Map<String, dynamic>) {
           // Handle Map format
           batchNumber = (batch['batchNumber'] ?? batch['batch_number'] ?? batch['batchId'] ?? batch['batch_id'] ?? '').toString();
           itemName = (batch['itemName'] ?? batch['item_name'] ?? batch['productName'] ?? batch['product_name'] ?? '').toString();
           expiryDate = (batch['expiryDate'] ?? batch['expiry_date'] ?? '').toString();
+          quantity = (batch['quantity'] ?? 0) as int;
         } else {
           // Handle BatchModel object
           batchNumber = batch?.batchNumber ?? batch?.batchId ?? '';
@@ -203,7 +187,7 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
           itemName: itemName,
           expiryDate: expiryDate,
           confidence: (result['confidence'] ?? 0.0).toDouble(),
-          requestedQuantity: result['requestedQuantity'] ?? 0,
+          requestedQuantity: quantity, // Use the item's quantity
           rank: i + 1,
           itemCode: result['itemCode'],
           purchaseOrderNumber: result['purchaseOrderNumber'],
@@ -1245,6 +1229,7 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
   Future<void> _captureImage() async {
     final loggingProvider = Provider.of<LoggingProvider>(context, listen: false);
     final batchProvider = Provider.of<BatchProvider>(context, listen: false);
+    final sessionProvider = Provider.of<SessionProvider>(context, listen: false);
     
     if (!_isCameraInitialized || _ocrService.cameraController?.value.isInitialized != true) {
       loggingProvider.logError('Camera not initialized for capture');
@@ -1270,26 +1255,42 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
       }
 
       // Filter batches based on selected item (if provided)
-      List<dynamic> availableBatches;
+      List<Map<String, dynamic>> availableBatches;
       if (widget.selectedItem != null) {
-        // Filter batches for the specific selected item only
-        final selectedItemName = widget.selectedItem!.itemName.toLowerCase();
-        availableBatches = batchProvider.batches.where((batch) {
-          final batchItemName = (batch.itemName ?? batch.productName ?? '').toLowerCase();
-          return batchItemName == selectedItemName;
+        // Convert selected item's batches to Map format for OCR processing
+        availableBatches = widget.selectedItem!.batches.map((batch) => {
+          'batchNumber': batch.batchNumber,
+          'expiryDate': batch.expiryDate,
+          'itemName': widget.selectedItem!.itemName,
+          'quantity': widget.selectedItem!.quantity,
         }).toList();
         
         loggingProvider.logApp(
           'Filtered batches for selected item: ${widget.selectedItem!.itemName}',
           data: {
             'selectedItem': widget.selectedItem!.itemName,
-            'totalBatchesInSession': batchProvider.batches.length,
             'filteredBatchesForItem': availableBatches.length,
+            'itemQuantity': widget.selectedItem!.quantity,
           }
         );
       } else {
-        // Use all batches if no specific item selected (fallback behavior)
-        availableBatches = batchProvider.batches;
+        // Use all batches from session if no specific item selected (fallback behavior)
+        final session = sessionProvider.currentSession;
+        availableBatches = [];
+        if (session != null) {
+          for (final rack in session.racks) {
+            for (final item in rack.items) {
+              for (final batch in item.batches) {
+                availableBatches.add({
+                  'batchNumber': batch.batchNumber,
+                  'expiryDate': batch.expiryDate,
+                  'itemName': item.itemName,
+                  'quantity': item.quantity,
+                });
+              }
+            }
+          }
+        }
         loggingProvider.logApp(
           'No specific item selected, using all session batches',
           data: {'totalBatches': availableBatches.length}
@@ -1345,7 +1346,7 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
       loggingProvider.logSuccess('OCR processing completed, showing swipeable batch matches');
       
       // Show swipeable batch match cards instead of traditional dialogs
-      await _showSwipeableBatchMatchCards(extractedText);
+      await _showSwipeableBatchMatchCards(extractedText, availableBatches);
 
     } catch (e) {
       loggingProvider.logError('Image capture and processing failed: $e');
