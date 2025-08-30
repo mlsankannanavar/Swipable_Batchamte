@@ -180,10 +180,28 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
       for (int i = 0; i < matchResults.length; i++) {
         final result = matchResults[i];
         final batch = result['batch']; // Access the nested batch object
+        
+        // Handle both Map and BatchModel objects for the batch data
+        String batchNumber;
+        String itemName;
+        String expiryDate;
+        
+        if (batch is Map<String, dynamic>) {
+          // Handle Map format
+          batchNumber = (batch['batchNumber'] ?? batch['batch_number'] ?? batch['batchId'] ?? batch['batch_id'] ?? '').toString();
+          itemName = (batch['itemName'] ?? batch['item_name'] ?? batch['productName'] ?? batch['product_name'] ?? '').toString();
+          expiryDate = (batch['expiryDate'] ?? batch['expiry_date'] ?? '').toString();
+        } else {
+          // Handle BatchModel object
+          batchNumber = batch?.batchNumber ?? batch?.batchId ?? '';
+          itemName = batch?.itemName ?? batch?.productName ?? '';
+          expiryDate = batch?.expiryDate ?? '';
+        }
+        
         batchMatches.add(BatchMatch(
-          batchNumber: batch?.batchNumber ?? batch?.batchId ?? '',
-          itemName: batch?.itemName ?? batch?.productName ?? '',
-          expiryDate: batch?.expiryDate ?? '',
+          batchNumber: batchNumber,
+          itemName: itemName,
+          expiryDate: expiryDate,
           confidence: (result['confidence'] ?? 0.0).toDouble(),
           requestedQuantity: result['requestedQuantity'] ?? 0,
           rank: i + 1,

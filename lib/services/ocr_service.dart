@@ -1185,7 +1185,23 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
     
     // Calculate matches for all batches
     for (final batch in batches) {
-      final batchNumber = (batch.batchNumber ?? batch.batchId ?? '').toString().trim().toUpperCase();
+      // Handle both BatchModel objects and Map objects
+      String batchNumber;
+      String? expiryDate;
+      String? itemName;
+      
+      if (batch is Map<String, dynamic>) {
+        // Handle Map format
+        batchNumber = (batch['batchNumber'] ?? batch['batch_number'] ?? batch['batchId'] ?? batch['batch_id'] ?? '').toString().trim().toUpperCase();
+        expiryDate = batch['expiryDate']?.toString() ?? batch['expiry_date']?.toString();
+        itemName = batch['itemName']?.toString() ?? batch['item_name']?.toString() ?? batch['productName']?.toString() ?? batch['product_name']?.toString();
+      } else {
+        // Handle BatchModel object
+        batchNumber = (batch.batchNumber ?? batch.batchId ?? '').toString().trim().toUpperCase();
+        expiryDate = batch.expiryDate;
+        itemName = batch.itemName ?? batch.productName;
+      }
+      
       if (batchNumber.isEmpty) continue;
       
       // Calculate batch number similarity
@@ -1193,8 +1209,8 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
       
       // Calculate expiry date similarity
       double expiryScore = 0.0;
-      if (batch.expiryDate != null) {
-        expiryScore = _calculateExpiryDateSimilarityForCards(batch.expiryDate.toString(), extractedText);
+      if (expiryDate != null) {
+        expiryScore = _calculateExpiryDateSimilarityForCards(expiryDate.toString(), extractedText);
       }
       
       // Combined score (weighted: batch 70%, expiry 30%)
@@ -1205,12 +1221,9 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
         int requestedQuantity = 0;
         String? matchedItemCode;
         
-        final itemName = batch.itemName ?? batch.productName ?? '';
-        final batchNumber = batch.batchNumber ?? batch.batchId ?? '';
-        
         // Try to find the best matching item code for this batch
         matchedItemCode = _findBestItemCodeForBatch(
-          itemName: itemName,
+          itemName: itemName ?? '',
           batchNumber: batchNumber,
           itemsWithRemNumbers: itemsWithRemNumbers,
           allMatches: allMatches,
