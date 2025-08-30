@@ -424,7 +424,6 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
         
         // Add to submitted batches with comprehensive data
         final sessionProvider = Provider.of<SessionProvider>(context, listen: false);
-        final currentSession = sessionProvider.currentSession;
         final selectedRackName = sessionProvider.selectedRackName;
         
         final submissionDetail = BatchSubmissionDetail(
@@ -437,9 +436,7 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
           requestedQuantity: widget.selectedItem?.quantity ?? 0,
           submittedQuantity: quantity,
           rackName: selectedRackName,
-          rackLocation: currentSession?.racks
-              .where((rack) => rack.rackName == selectedRackName)
-              .firstOrNull?.rackName,
+          rackLocation: selectedRackName, // Use rackName as rackLocation since we don't have separate location info
           extractedText: extractedText,
           capturedImage: _lastCapturedImageBytes != null ? Uint8List.fromList(_lastCapturedImageBytes!) : null,
           ocrConfidence: confidence,
