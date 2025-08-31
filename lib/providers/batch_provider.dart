@@ -106,14 +106,35 @@ class BatchProvider extends ChangeNotifier {
     }
   }
 
-  // Clear session and batches
-  void clearSession() {
-    _batches = [];
-    _currentSessionId = null;
-    _errorMessage = null;
-    _loadingState = BatchLoadingState.idle;
-    _logger.logApp('Session cleared');
-    notifyListeners();
+  // Clear session and batches - comprehensive cleanup
+  Future<void> clearSession() async {
+    try {
+      // Clear in-memory data
+      _batches = [];
+      _submittedBatches = [];
+      _currentSessionId = null;
+      _errorMessage = null;
+      _sessionDetails = null;
+      _loadingState = BatchLoadingState.idle;
+      _lastLoadTime = null;
+      _lastLoadDuration = null;
+      
+      // Reset statistics
+      _totalScans = 0;
+      _successfulSubmissions = 0;
+      _errorCount = 0;
+      
+      // Clear all cached data from Hive storage
+      if (_batchBox != null) {
+        await _batchBox!.clear();
+        _logger.logApp('Cleared all cached data from storage');
+      }
+      
+      _logger.logApp('Session cleared completely - all data removed');
+      notifyListeners();
+    } catch (e, stackTrace) {
+      _logger.logError('Error clearing session', error: e, stackTrace: stackTrace);
+    }
   }
 
   // Statistics methods
@@ -241,26 +262,40 @@ class BatchProvider extends ChangeNotifier {
       final cachedData = _batchBox!.values.toList();
       
       for (final data in cachedData) {
-        final sessionData = Map<String, dynamic>.from(data);
-        final batchesData = sessionData['batches'] as Map<String, dynamic>?;
-        
-        if (batchesData != null) {
-          final sessionId = sessionData['sessionId'] as String?;
-          final cachedAt = DateTime.fromMillisecondsSinceEpoch(
-            sessionData['cachedAt'] as int
-          );
+        try {
+          // Skip if data is not a Map (could be List from submitted batches)
+          if (data is! Map) continue;
           
-          // Only load if cached within last 24 hours
-          if (DateTime.now().difference(cachedAt).inHours < 24) {
-            final batches = batchesData.entries.map((entry) {
-              return BatchModel.fromMap(Map<String, dynamic>.from(entry.value));
-            }).toList();
+          final sessionData = Map<String, dynamic>.from(data);
+          
+          // Skip if this is submitted batches data
+          if (sessionData.containsKey('batches') && sessionData['batches'] is List) {
+            continue;
+          }
+          
+          final batchesData = sessionData['batches'] as Map<String, dynamic>?;
+          
+          if (batchesData != null) {
+            final sessionId = sessionData['sessionId'] as String?;
+            final cachedAt = DateTime.fromMillisecondsSinceEpoch(
+              sessionData['cachedAt'] as int
+            );
             
-            if (sessionId != null) {
-              _batches.addAll(batches);
-              _currentSessionId = sessionId;
+            // Only load if cached within last 24 hours
+            if (DateTime.now().difference(cachedAt).inHours < 24) {
+              final batches = batchesData.entries.map((entry) {
+                return BatchModel.fromMap(Map<String, dynamic>.from(entry.value));
+              }).toList();
+              
+              if (sessionId != null) {
+                _batches.addAll(batches);
+                _currentSessionId = sessionId;
+              }
             }
           }
+        } catch (e) {
+          _logger.logWarning('Skipping invalid cached data entry: $e');
+          continue;
         }
       }
       

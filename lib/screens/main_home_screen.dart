@@ -36,6 +36,19 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
     super.dispose();
   }
 
+  TabController _getTabController() {
+    if (_tabController == null) {
+      _tabController = TabController(length: 2, vsync: this);
+      _tabController!.addListener(() {
+        // Refresh UI when tab changes to ensure submitted items are updated
+        if (mounted) {
+          setState(() {});
+        }
+      });
+    }
+    return _tabController!;
+  }
+
   void _initializeApp() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final loggingProvider = Provider.of<LoggingProvider>(context, listen: false);
@@ -74,15 +87,19 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Clear Session'),
-          content: const Text('Are you sure you want to clear the current session? This will remove all session data and return to QR scanner.'),
+          content: const Text('Are you sure you want to clear the current session? This will remove all session data, submitted batches, and return to QR scanner.'),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
               child: const Text('Cancel'),
             ),
             TextButton(
-              onPressed: () {
-                sessionProvider.clearSession();
+              onPressed: () async {
+                // Clear both session and batch data completely
+                final batchProvider = Provider.of<BatchProvider>(context, listen: false);
+                await sessionProvider.clearSession();
+                await batchProvider.clearSession();
+                
                 Navigator.of(context).pop();
                 setState(() {
                   _tabController?.dispose();
@@ -154,7 +171,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
                   child: Container(
                     color: Colors.white,
                     child: TabBar(
-                      controller: _tabController ??= TabController(length: 2, vsync: this),
+                      controller: _getTabController(),
                       indicatorColor: AppColors.primary,
                       labelColor: AppColors.primary,
                       unselectedLabelColor: Colors.grey,
@@ -218,7 +235,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
           ),
           body: hasSession 
             ? TabBarView(
-                controller: _tabController,
+                controller: _getTabController(),
                 children: [
                   _buildAvailableItemsScreen(sessionProvider),
                   _buildSubmittedItemsScreen(sessionProvider),

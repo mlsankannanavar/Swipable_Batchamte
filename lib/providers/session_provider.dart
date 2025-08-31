@@ -246,15 +246,26 @@ class SessionProvider extends ChangeNotifier {
     return selectedRack?.isItemSubmitted(itemName) ?? false;
   }
 
-  // Clear current session
-  void clearSession() {
-    _currentSession = null;
-    _selectedRackName = null;
-    _setLoadingState(SessionLoadingState.idle);
-    _errorMessage = null;
-    
-    _logger.logApp('Session cleared');
-    notifyListeners();
+  // Clear current session - comprehensive cleanup
+  Future<void> clearSession() async {
+    try {
+      // Clear in-memory data
+      _currentSession = null;
+      _selectedRackName = null;
+      _setLoadingState(SessionLoadingState.idle);
+      _errorMessage = null;
+      
+      // Clear cached session data from storage
+      if (_sessionBox != null) {
+        await _sessionBox!.clear();
+        _logger.logApp('Cleared cached session data from storage');
+      }
+      
+      _logger.logApp('Session cleared completely');
+      notifyListeners();
+    } catch (e, stackTrace) {
+      _logger.logError('Error clearing session', error: e, stackTrace: stackTrace);
+    }
   }
 
   // Retry loading current session
