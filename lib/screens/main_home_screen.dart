@@ -323,17 +323,10 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
           margin: const EdgeInsets.all(16.0),
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                AppColors.primary.withOpacity(0.1),
-                AppColors.primary.withOpacity(0.05),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+            color: Colors.white,
             borderRadius: BorderRadius.circular(12.0),
             border: Border.all(
-              color: AppColors.primary.withOpacity(0.3),
+              color: AppColors.primary,
               width: 2.0,
             ),
             boxShadow: [
@@ -457,17 +450,10 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
           margin: const EdgeInsets.all(16.0),
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                Colors.green.withOpacity(0.1),
-                Colors.green.withOpacity(0.05),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+            color: Colors.white,
             borderRadius: BorderRadius.circular(12.0),
             border: Border.all(
-              color: Colors.green.withOpacity(0.3),
+              color: Colors.green,
               width: 2.0,
             ),
             boxShadow: [
@@ -580,8 +566,24 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
         return batchRackName == selectedRack.rackName;
       }).toList();
     } else {
-      // Show available items from selected rack
-      itemsToShow = selectedRack.items.where((item) => !item.isSubmitted).toList();
+      // Show available items from selected rack, excluding submitted items
+      final batchProvider = Provider.of<BatchProvider>(context, listen: false);
+      final submittedBatches = batchProvider.getSubmittedBatches();
+      
+      // Create a set of submitted batch numbers for quick lookup
+      final submittedBatchNumbers = submittedBatches
+          .map((batch) => batch['batchNumber'] as String?)
+          .where((batchNumber) => batchNumber != null)
+          .map((batchNumber) => batchNumber!)
+          .toSet();
+          
+      // Filter available items, excluding those with submitted batches
+      itemsToShow = selectedRack.items.where((item) {
+        // Check if any of the item's batches have been submitted
+        final itemBatches = item.batches ?? [];
+        return !itemBatches.any((batch) => 
+            submittedBatchNumbers.contains(batch.batchNumber));
+      }).toList();
     }
 
     if (itemsToShow.isEmpty) {
@@ -657,7 +659,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
         ),
         child: InkWell(
           borderRadius: BorderRadius.circular(12.0),
-          onTap: isSubmitted ? () => _openSubmissionDetails(item) : () => _openOCRScanner(item),
+          onTap: isSubmitted ? null : () => _openOCRScanner(item), // Only allow tap for available items
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Row(
@@ -726,27 +728,45 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
                   ),
                 ),
                 if (isSubmitted) ...[
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.green.shade600,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.check, color: Colors.white, size: 16),
-                        SizedBox(width: 4),
-                        Text(
-                          'Submitted',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                          ),
+                  Column(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.green.shade600,
+                          borderRadius: BorderRadius.circular(20),
                         ),
-                      ],
-                    ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.check, color: Colors.white, size: 16),
+                            SizedBox(width: 4),
+                            Text(
+                              'Submitted',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      ElevatedButton.icon(
+                        onPressed: () => _openSubmissionDetails(item),
+                        icon: const Icon(Icons.info_outline, size: 16),
+                        label: const Text('More Details'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue.shade600,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          textStyle: const TextStyle(fontSize: 12),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ],
