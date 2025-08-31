@@ -846,6 +846,7 @@ class BatchProvider extends ChangeNotifier {
       'batchNumber': submissionDetail.batchNumber,
       'itemName': submissionDetail.itemName,
       'quantity': submissionDetail.submittedQuantity.toString(),
+      'rackName': submissionDetail.rackName, // Add rack name for filtering
       'capturedImage': submissionDetail.capturedImage?.toList(),
       'submittedAt': submissionDetail.submissionTimestamp.toIso8601String(),
       'sessionId': submissionDetail.sessionId,
@@ -892,6 +893,8 @@ class BatchProvider extends ChangeNotifier {
     };
     
     _submittedBatches.add(submittedBatch);
+    
+    // Immediate notification
     notifyListeners();
     
     // Save to storage
@@ -902,6 +905,10 @@ class BatchProvider extends ChangeNotifier {
       };
       await _batchBox!.put('submitted_batches', storageData);
     }
+    
+    // Force another notification after storage to ensure UI consistency
+    await Future.delayed(const Duration(milliseconds: 100));
+    notifyListeners();
     
     _logger.logApp('Batch submitted with detailed tracking: ${submissionDetail.batchNumber}');
   }

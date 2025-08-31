@@ -39,6 +39,7 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
   String? _capturedImagePath;
   String? _extractedText;
   List<int>? _lastCapturedImageBytes;
+  String? _lastSubmittedBatchNumber; // Track last submitted batch
   
   // Performance tracking
   Duration? _ocrProcessingTime;
@@ -460,6 +461,9 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
         
         await batchProvider.addSubmittedBatchDetail(submissionDetail);
         
+        // Store the submitted batch number for returning to main screen
+        _lastSubmittedBatchNumber = batch.batchNumber ?? batch.batchId ?? '';
+        
         loggingProvider.logSuccess('Batch submitted successfully');
         _showSuccessDialog('Batch submitted successfully!');
         _resetCapture(); // Reset for next scan
@@ -538,7 +542,15 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
         content: Text(message),
         actions: [
           ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () {
+              Navigator.of(context).pop(); // Close dialog
+              // Return to main screen with success result
+              Navigator.of(context).pop({
+                'success': true,
+                'selectedBatch': _lastSubmittedBatchNumber,
+                'message': message,
+              });
+            },
             child: const Text('Continue'),
           ),
         ],

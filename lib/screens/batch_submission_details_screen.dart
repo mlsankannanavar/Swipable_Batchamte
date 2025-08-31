@@ -37,6 +37,23 @@ class _BatchSubmissionDetailsScreenState extends State<BatchSubmissionDetailsScr
 
   @override
   Widget build(BuildContext context) {
+    // Debug: Check if we have data
+    if (widget.submittedBatch == null) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Batch Details'),
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
+        ),
+        body: const Center(
+          child: Text(
+            'No submission data available',
+            style: TextStyle(fontSize: 16),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: _buildAppBar(),
       body: _buildBody(),
@@ -60,27 +77,58 @@ class _BatchSubmissionDetailsScreenState extends State<BatchSubmissionDetailsScr
   }
 
   Widget _buildBody() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildHeader(),
-          const SizedBox(height: 24),
-          _buildCapturedImage(),
-          const SizedBox(height: 24),
-          _buildExtractionDetails(),
-          const SizedBox(height: 24),
-          _buildMatchingDetails(),
-          const SizedBox(height: 24),
-          _buildSubmissionDetails(),
-          const SizedBox(height: 24),
-          _buildTimingDetails(),
-          const SizedBox(height: 24),
-          _buildApiDetails(),
-        ],
-      ),
-    );
+    try {
+      return SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildHeader(),
+            const SizedBox(height: 24),
+            _buildCapturedImage(),
+            const SizedBox(height: 24),
+            _buildExtractionDetails(),
+            const SizedBox(height: 24),
+            _buildMatchingDetails(),
+            const SizedBox(height: 24),
+            _buildSubmissionDetails(),
+            const SizedBox(height: 24),
+            _buildTimingDetails(),
+            const SizedBox(height: 24),
+            _buildApiDetails(),
+          ],
+        ),
+      );
+    } catch (e, stackTrace) {
+      print('Error building submission details body: $e');
+      print('Stack trace: $stackTrace');
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error_outline, size: 64, color: Colors.red.shade300),
+              const SizedBox(height: 16),
+              Text(
+                'Error loading submission details',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.red.shade700,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Error: $e',
+                style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
   }
 
   Widget _buildHeader() {
@@ -157,7 +205,7 @@ class _BatchSubmissionDetailsScreenState extends State<BatchSubmissionDetailsScr
                     child: Stack(
                       children: [
                         Image.memory(
-                          widget.submittedBatch['capturedImage'],
+                          Uint8List.fromList(List<int>.from(widget.submittedBatch['capturedImage'])),
                           fit: BoxFit.contain,
                           width: double.infinity,
                           height: double.infinity,
@@ -560,7 +608,7 @@ class _BatchSubmissionDetailsScreenState extends State<BatchSubmissionDetailsScr
               minScale: 0.5,
               maxScale: 4.0,
               child: Image.memory(
-                widget.submittedBatch['capturedImage'],
+                Uint8List.fromList(List<int>.from(widget.submittedBatch['capturedImage'])),
                 fit: BoxFit.contain,
               ),
             ),

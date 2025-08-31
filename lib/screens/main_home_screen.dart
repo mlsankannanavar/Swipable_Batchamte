@@ -811,14 +811,15 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
       ),
     ).then((result) {
       if (result != null && result is Map<String, dynamic>) {
+        final success = result['success'] as bool? ?? false;
         final selectedBatch = result['selectedBatch'] as String?;
-        if (selectedBatch != null) {
-          // Mark item as submitted and move to submitted tab
-          final sessionProvider = Provider.of<SessionProvider>(context, listen: false);
-          sessionProvider.submitItemWithBatch(item, selectedBatch);
+        
+        if (success && selectedBatch != null) {
+          // Force refresh the UI by triggering a rebuild
+          setState(() {});
           
           // Switch to submitted items tab
-          _tabController?.animateTo(1);
+          _getTabController().animateTo(1);
           
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -827,6 +828,11 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
             ),
           );
         }
+      }
+      
+      // Always refresh the UI after returning from OCR scanner
+      if (mounted) {
+        setState(() {});
       }
     });
   }
