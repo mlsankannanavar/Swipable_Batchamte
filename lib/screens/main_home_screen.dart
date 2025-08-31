@@ -8,6 +8,7 @@ import '../screens/qr_scanner_screen.dart';
 import '../screens/ocr_scanner_screen.dart';
 import '../screens/log_viewer_screen.dart';
 import '../screens/settings_screen.dart';
+import '../screens/batch_submission_details_screen.dart';
 import '../utils/app_colors.dart';
 import '../widgets/connection_status_widget.dart';
 import '../services/api_service.dart';
@@ -117,15 +118,35 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
           backgroundColor: AppColors.primary,
           appBar: AppBar(
             backgroundColor: Colors.white,
-            title: Text(
-              'BatchMate',
-              style: TextStyle(
-                color: AppColors.primary,
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-              ),
+            title: Row(
+              children: [
+                // App logo/icon on the left
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: const BoxDecoration(
+                    image: DecorationImage(
+                      image: AssetImage('assets/logo/icon.png'),
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // BatchMate text
+                Text(
+                  'BatchMate',
+                  style: TextStyle(
+                    color: AppColors.primary,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const Spacer(),
+                // Connection status with smaller font
+                const ConnectionStatusWidget(fontSize: 10),
+              ],
             ),
-            centerTitle: true,
+            titleSpacing: 16,
             // Show tabs only when session is loaded
             bottom: hasSession 
               ? PreferredSize(
@@ -146,10 +167,6 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
                 )
               : null,
             actions: [
-              const Padding(
-                padding: EdgeInsets.only(right: 8.0),
-                child: ConnectionStatusWidget(),
-              ),
               PopupMenuButton<String>(
                 icon: Icon(Icons.more_vert, color: AppColors.primary),
                 onSelected: (String value) {
@@ -580,7 +597,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
       // Filter available items, excluding those with submitted batches
       itemsToShow = selectedRack.items.where((item) {
         // Check if any of the item's batches have been submitted
-        final itemBatches = item.batches ?? [];
+        final itemBatches = item.batches;
         return !itemBatches.any((batch) => 
             submittedBatchNumbers.contains(batch.batchNumber));
       }).toList();
@@ -740,15 +757,6 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(Icons.check, color: Colors.white, size: 16),
-                            SizedBox(width: 4),
-                            Text(
-                              'Submitted',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
                           ],
                         ),
                       ),
@@ -807,14 +815,14 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
   }
 
   void _openSubmissionDetails(Map<String, dynamic> submittedBatch) {
-    // Navigate to submission details screen
-    final submissionDetail = submittedBatch['submissionDetail'];
-    if (submissionDetail != null) {
-      Navigator.pushNamed(
-        context,
-        '/batch-submission-details',
-        arguments: submissionDetail,
-      );
-    }
+    // Navigate to submission details screen with the submitted batch data
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => BatchSubmissionDetailsScreen(
+          submittedBatch: submittedBatch,
+        ),
+      ),
+    );
   }
 }

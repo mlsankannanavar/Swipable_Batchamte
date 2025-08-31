@@ -6,11 +6,13 @@ import '../utils/app_colors.dart';
 class ConnectionStatusWidget extends StatelessWidget {
   final bool showDetails;
   final bool compact;
+  final double fontSize;
 
   const ConnectionStatusWidget({
     super.key,
     this.showDetails = false,
     this.compact = false,
+    this.fontSize = 12,
   });
 
   @override
@@ -36,14 +38,14 @@ class ConnectionStatusWidget extends StatelessWidget {
         Icon(
           icon,
           color: color,
-          size: 16,
+          size: fontSize + 4, // Scale icon with font size
         ),
         const SizedBox(width: 4),
         Text(
           _getStatusText(appState.connectionStatus),
           style: TextStyle(
             color: color,
-            fontSize: 12,
+            fontSize: fontSize,
             fontWeight: FontWeight.w500,
           ),
         ),

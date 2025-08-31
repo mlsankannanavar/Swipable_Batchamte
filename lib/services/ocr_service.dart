@@ -962,7 +962,15 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
     _logger.logOcr('OPTIMIZED_NEAREST_SEARCH: Finding nearest matches (no exact expiry match required)');
     
     for (final batch in batches) {
-      final batchNumber = (batch.batchNumber ?? batch.batchId ?? '').toString().trim().toUpperCase();
+      // Handle both BatchModel objects and Map objects
+      String batchNumber = '';
+      if (batch is Map<String, dynamic>) {
+        batchNumber = (batch['batchNumber'] ?? batch['batchId'] ?? '').toString().trim().toUpperCase();
+      } else {
+        // Assume it's a BatchModel or similar object with properties
+        batchNumber = (batch.batchNumber ?? batch.batchId ?? '').toString().trim().toUpperCase();
+      }
+      
       if (batchNumber.isEmpty) continue;
 
       final similarity = _findBatchNumberOptimized(batchNumber, normalizedText, words, wordSet);

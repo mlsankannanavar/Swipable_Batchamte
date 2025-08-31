@@ -691,13 +691,12 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
             children: [
               // Left side - BatchMate title with selected item info
               Expanded(
-                flex: 2,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     const Text(
-                      'BatchMate',
+                      'BatchMate Scanner',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -716,63 +715,29 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
                   ],
                 ),
               ),
-              // Center - Session ID
-              Expanded(
-                flex: 3,
-                child: Center(
-                  child: sessionProvider.hasSession || sessionProvider.currentSessionId != null
-                      ? Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.green.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.green.shade300),
-                          ),
-                          child: Text(
-                            '${sessionProvider.currentSessionId ?? 'N/A'}',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.green,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        )
-                      : const Text(
-                          'No Session',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.orange,
-                          ),
-                        ),
-                ),
-              ),
               // Right side - Connection status
-              Expanded(
-                flex: 2,
-                child: Consumer<AppStateProvider>(
-                  builder: (context, appStateProvider, child) {
-                    final isConnected = appStateProvider.connectionStatus == ConnectionStatus.connected;
-                    return Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        Icon(
-                          isConnected ? Icons.wifi : Icons.wifi_off,
-                          size: 16,
+              Consumer<AppStateProvider>(
+                builder: (context, appStateProvider, child) {
+                  final isConnected = appStateProvider.connectionStatus == ConnectionStatus.connected;
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Icon(
+                        isConnected ? Icons.wifi : Icons.wifi_off,
+                        size: 16,
+                        color: isConnected ? Colors.green : Colors.red,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        isConnected ? 'Online' : 'Offline',
+                        style: TextStyle(
+                          fontSize: 10,
                           color: isConnected ? Colors.green : Colors.red,
                         ),
-                        const SizedBox(width: 4),
-                        Text(
-                          isConnected ? 'Online' : 'Offline',
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: isConnected ? Colors.green : Colors.red,
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
+                      ),
+                    ],
+                  );
+                },
               ),
             ],
           );

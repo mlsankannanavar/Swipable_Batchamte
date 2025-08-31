@@ -72,9 +72,12 @@ class BatchProvider extends ChangeNotifier {
       // Load cached batches
       await _loadCachedBatches();
       
+      // Load submitted batches from storage
+      await loadSubmittedBatches();
+      
       _isInitialized = true;
       _logger.logApp('BatchProvider initialized successfully',
-          data: {'cachedBatchCount': _batches.length});
+          data: {'cachedBatchCount': _batches.length, 'submittedBatchCount': _submittedBatches.length});
       
       notifyListeners();
     } catch (e, stackTrace) {
