@@ -762,36 +762,29 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
                   ),
                 ),
                 if (isSubmitted) ...[
-                  Column(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: Colors.green.shade600,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.check, color: Colors.white, size: 16),
+                  Consumer<AppStateProvider>(
+                    builder: (context, appState, child) {
+                      return Column(
+                        children: [
+                          // Only show More Details button if setting is enabled
+                          if (appState.showMoreDetailsButton) ...[
+                            ElevatedButton.icon(
+                              onPressed: () => _openSubmissionDetails(item),
+                              icon: const Icon(Icons.info_outline, size: 16),
+                              label: const Text('More Details'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.blue.shade600,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                minimumSize: Size.zero,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                textStyle: const TextStyle(fontSize: 12),
+                              ),
+                            ),
                           ],
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      ElevatedButton.icon(
-                        onPressed: () => _openSubmissionDetails(item),
-                        icon: const Icon(Icons.info_outline, size: 16),
-                        label: const Text('More Details'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue.shade600,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          minimumSize: Size.zero,
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          textStyle: const TextStyle(fontSize: 12),
-                        ),
-                      ),
-                    ],
+                        ],
+                      );
+                    },
                   ),
                 ],
               ],
@@ -818,13 +811,14 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
           // Force refresh the UI by triggering a rebuild
           setState(() {});
           
-          // Switch to submitted items tab
-          _getTabController().animateTo(1);
+          // Stay on available items tab so user can continue with next item
+          _getTabController().animateTo(0);
           
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('${item.itemName} submitted successfully with batch $selectedBatch!'),
+              content: Text('${item.itemName} submitted successfully with batch $selectedBatch! Ready for next item.'),
               backgroundColor: Colors.green,
+              duration: const Duration(seconds: 4),
             ),
           );
         }

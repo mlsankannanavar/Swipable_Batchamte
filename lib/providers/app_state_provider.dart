@@ -22,9 +22,11 @@ class AppStateProvider with ChangeNotifier {
   bool _isInitialized = false;
   String? _errorMessage;
   String _apiBaseUrl = Constants.apiBaseUrl;
+  bool _showMoreDetailsButton = true; // Default to true
 
   // Constants for shared preferences
   static const String _apiBaseUrlKey = 'api_base_url';
+  static const String _showMoreDetailsButtonKey = 'show_more_details_button';
 
   // Getters
   AppStatus get appStatus => _appStatus;
@@ -38,6 +40,7 @@ class AppStateProvider with ChangeNotifier {
   bool get isServerHealthy => _serverHealth?.isHealthy ?? false;
   String get apiBaseUrl => _apiBaseUrl;
   bool get isApiHealthy => isConnected && isServerHealthy;
+  bool get showMoreDetailsButton => _showMoreDetailsButton;
 
   AppStateProvider() {
     _initializeApp();
@@ -56,6 +59,9 @@ class AppStateProvider with ChangeNotifier {
       
       // Load API base URL from preferences
       await loadApiBaseUrl();
+      
+      // Load More Details button setting from preferences
+      await loadMoreDetailsButtonSetting();
       
       // Update API service with loaded URL
       _apiService.updateBaseUrl(_apiBaseUrl);
@@ -310,6 +316,32 @@ class AppStateProvider with ChangeNotifier {
       notifyListeners();
     } catch (e) {
       _logger.logError('Failed to load API base URL', error: e);
+    }
+  }
+
+  // Load More Details button setting from SharedPreferences
+  Future<void> loadMoreDetailsButtonSetting() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _showMoreDetailsButton = prefs.getBool(_showMoreDetailsButtonKey) ?? true;
+      _logger.logApp('Loaded More Details button setting: $_showMoreDetailsButton');
+      notifyListeners();
+    } catch (e) {
+      _logger.logError('Failed to load More Details button setting', error: e);
+    }
+  }
+
+  // Update More Details button setting
+  Future<void> updateMoreDetailsButtonSetting(bool showButton) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_showMoreDetailsButtonKey, showButton);
+      _showMoreDetailsButton = showButton;
+      _logger.logApp('Updated More Details button setting to: $showButton');
+      notifyListeners();
+    } catch (e) {
+      _logger.logError('Failed to update More Details button setting', error: e);
+      throw Exception('Failed to save setting: ${e.toString()}');
     }
   }
 

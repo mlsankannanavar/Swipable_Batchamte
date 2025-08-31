@@ -117,6 +117,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
           child: Column(
             children: [
               SwitchListTile(
+                title: const Text('Show More Details Button'),
+                subtitle: const Text('Show detailed submission information button on submitted items'),
+                value: appState.showMoreDetailsButton,
+                onChanged: (value) {
+                  appState.updateMoreDetailsButtonSetting(value);
+                  _logSettingChange('More Details Button', value);
+                },
+                secondary: const Icon(Icons.info_outline),
+              ),
+              const Divider(height: 1),
+              SwitchListTile(
                 title: const Text('Dark Mode'),
                 subtitle: const Text('Use dark theme'),
                 value: appState.isDarkMode,
