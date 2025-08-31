@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_state_provider.dart';
+import '../providers/batch_provider.dart';
 import '../providers/logging_provider.dart';
 import '../providers/session_provider.dart';
 import '../screens/qr_scanner_screen.dart';
@@ -322,17 +323,24 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
           margin: const EdgeInsets.all(16.0),
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
           decoration: BoxDecoration(
-            color: Colors.white,
+            gradient: LinearGradient(
+              colors: [
+                AppColors.primary.withOpacity(0.1),
+                AppColors.primary.withOpacity(0.05),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
             borderRadius: BorderRadius.circular(12.0),
             border: Border.all(
-              color: Colors.grey.shade300,
-              width: 1.5,
+              color: AppColors.primary.withOpacity(0.3),
+              width: 2.0,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.withOpacity(0.1),
+                color: AppColors.primary.withOpacity(0.2),
                 spreadRadius: 1,
-                blurRadius: 6,
+                blurRadius: 8,
                 offset: const Offset(0, 3),
               ),
             ],
@@ -343,14 +351,14 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
               hint: Row(
                 children: [
                   Icon(Icons.inventory_2_outlined, 
-                      color: Colors.grey.shade600, size: 20),
+                      color: AppColors.primary, size: 22),
                   const SizedBox(width: 12),
                   Text(
-                    'Select Rack', 
+                    '📦 Select Rack', 
                     style: TextStyle(
-                      color: Colors.grey.shade600,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
+                      color: AppColors.primary,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],
@@ -449,17 +457,24 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
           margin: const EdgeInsets.all(16.0),
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
           decoration: BoxDecoration(
-            color: Colors.white,
+            gradient: LinearGradient(
+              colors: [
+                Colors.green.withOpacity(0.1),
+                Colors.green.withOpacity(0.05),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
             borderRadius: BorderRadius.circular(12.0),
             border: Border.all(
-              color: Colors.grey.shade300,
-              width: 1.5,
+              color: Colors.green.withOpacity(0.3),
+              width: 2.0,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.withOpacity(0.1),
+                color: Colors.green.withOpacity(0.2),
                 spreadRadius: 1,
-                blurRadius: 6,
+                blurRadius: 8,
                 offset: const Offset(0, 3),
               ),
             ],
@@ -470,14 +485,14 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
               hint: Row(
                 children: [
                   Icon(Icons.inventory_2_outlined, 
-                      color: Colors.grey.shade600, size: 20),
+                      color: Colors.green, size: 22),
                   const SizedBox(width: 12),
                   Text(
-                    'Select Rack', 
+                    '✅ Select Rack', 
                     style: TextStyle(
-                      color: Colors.grey.shade600,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
+                      color: Colors.green.shade700,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],
@@ -485,7 +500,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
               isExpanded: true,
               icon: Icon(
                 Icons.keyboard_arrow_down,
-                color: AppColors.primary,
+                color: Colors.green,
                 size: 24,
               ),
               items: session.racks.map((rack) {
@@ -555,7 +570,15 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
     List<dynamic> itemsToShow;
     if (showSubmitted) {
       // Show submitted items from selected rack only
-      itemsToShow = selectedRack.items.where((item) => item.isSubmitted).toList();
+      final batchProvider = Provider.of<BatchProvider>(context, listen: false);
+      final submittedBatches = batchProvider.getSubmittedBatches();
+      
+      // Filter submitted batches by selected rack
+      itemsToShow = submittedBatches.where((batch) {
+        // Check if the submitted batch belongs to the selected rack
+        final batchRackName = batch['submissionDetail']?['rackName'] ?? batch['rackName'];
+        return batchRackName == selectedRack.rackName;
+      }).toList();
     } else {
       // Show available items from selected rack
       itemsToShow = selectedRack.items.where((item) => !item.isSubmitted).toList();
@@ -597,101 +620,142 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
   }
 
   Widget _buildItemCard(dynamic item, SessionProvider sessionProvider, bool isSubmitted) {
+    String itemName;
+    String quantity;
+    int batchCount = 0;
+    String? selectedBatch;
+
+    if (isSubmitted) {
+      // Handle submitted batch data
+      itemName = item['itemName'] ?? 'Unknown Item';
+      quantity = item['quantity']?.toString() ?? '0';
+      selectedBatch = item['batchNumber'];
+      batchCount = 1; // Each submitted batch is one batch
+    } else {
+      // Handle regular rack item data
+      itemName = item.itemName ?? 'Unknown Item';
+      quantity = item.quantity?.toString() ?? '0';
+      batchCount = item.batches?.length ?? 0;
+    }
+
     return Card(
       margin: const EdgeInsets.only(bottom: 12.0),
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12.0),
-        onTap: isSubmitted ? null : () => _openOCRScanner(item),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          item.itemName,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Quantity: ${item.quantity}',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey.shade600,
-                          ),
-                        ),
-                        Text(
-                          'Batches: ${item.batches.length}',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey.shade600,
-                          ),
-                        ),
-                        if (isSubmitted && item.selectedBatch != null) ...[
-                          const SizedBox(height: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.green.shade100,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              'Batch: ${item.selectedBatch}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.green.shade700,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
+      color: isSubmitted 
+          ? Colors.green.shade50  // Light green background for submitted items
+          : Colors.blue.shade50,  // Light blue background for available items
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12.0),
+          border: Border.all(
+            color: isSubmitted 
+                ? Colors.green.withOpacity(0.3)
+                : AppColors.primary.withOpacity(0.3),
+            width: 1.0,
+          ),
+        ),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12.0),
+          onTap: isSubmitted ? () => _openSubmissionDetails(item) : () => _openOCRScanner(item),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              children: [
+                // Add status icon
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: isSubmitted ? Colors.green : AppColors.primary,
+                    shape: BoxShape.circle,
                   ),
-                  if (isSubmitted) ...[
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.green.shade600,
-                        borderRadius: BorderRadius.circular(20),
+                  child: Icon(
+                    isSubmitted ? Icons.check : Icons.qr_code_scanner,
+                    color: Colors.white,
+                    size: 16,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        itemName,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.check, color: Colors.white, size: 16),
-                          SizedBox(width: 4),
-                          Text(
-                            'Submitted',
+                      const SizedBox(height: 4),
+                      Text(
+                        'Quantity: $quantity',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                      if (!isSubmitted) ...[
+                        Text(
+                          'Batches: $batchCount',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                      ],
+                      if (isSubmitted && selectedBatch != null) ...[
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.green.shade100,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            'Batch: $selectedBatch',
                             style: TextStyle(
-                              color: Colors.white,
                               fontSize: 12,
+                              color: Colors.green.shade700,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                if (isSubmitted) ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade600,
+                      borderRadius: BorderRadius.circular(20),
                     ),
-                  ],
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.check, color: Colors.white, size: 16),
+                        SizedBox(width: 4),
+                        Text(
+                          'Submitted',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
     );
-  }
-
-  void _openOCRScanner(dynamic item) {
+  }  void _openOCRScanner(dynamic item) {
     final loggingProvider = Provider.of<LoggingProvider>(context, listen: false);
     loggingProvider.logApp('Opening OCR scanner for item: ${item.itemName}');
 
@@ -720,5 +784,17 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
         }
       }
     });
+  }
+
+  void _openSubmissionDetails(Map<String, dynamic> submittedBatch) {
+    // Navigate to submission details screen
+    final submissionDetail = submittedBatch['submissionDetail'];
+    if (submissionDetail != null) {
+      Navigator.pushNamed(
+        context,
+        '/batch-submission-details',
+        arguments: submissionDetail,
+      );
+    }
   }
 }
