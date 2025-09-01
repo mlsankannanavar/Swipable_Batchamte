@@ -246,7 +246,7 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
   void _showSimpleErrorDialog(String title, String message) {
     showDialog(
       context: context,
-      barrierColor: Colors.black87, // Add opaque background to hide camera
+      barrierColor: Colors.black, // Completely opaque background to hide camera
       builder: (context) => AlertDialog(
         title: Text(title),
         content: Text(message),
@@ -340,7 +340,7 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
     showDialog(
       context: context,
       barrierDismissible: false,
-      barrierColor: Colors.black87, // Add opaque background to hide camera
+      barrierColor: Colors.black, // Completely opaque background to hide camera
       builder: (context) => AlertDialog(
         icon: const Icon(
           Icons.check_circle,
@@ -557,7 +557,7 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
   void _showInfoDialog(String message) {
     showDialog(
       context: context,
-      barrierColor: Colors.black87, // Add opaque background to hide camera
+      barrierColor: Colors.black, // Completely opaque background to hide camera
       builder: (context) => AlertDialog(
         content: Text(message),
         actions: [
@@ -1498,7 +1498,7 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
     showDialog(
       context: context,
       barrierDismissible: false,
-      barrierColor: Colors.black87, // Add opaque background to hide camera
+      barrierColor: Colors.black, // Completely opaque background to hide camera
       builder: (context) => AlertDialog(
         title: const Row(
           children: [
@@ -1573,7 +1573,7 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
   void _showOCRTips() {
     showDialog(
       context: context,
-      barrierColor: Colors.black87, // Add opaque background to hide camera
+      barrierColor: Colors.black, // Completely opaque background to hide camera
       builder: (context) => AlertDialog(
         title: const Text('OCR Tips'),
         content: const SingleChildScrollView(
