@@ -127,10 +127,17 @@ class BatchProvider extends ChangeNotifier {
       // Clear all cached data from Hive storage
       if (_batchBox != null) {
         await _batchBox!.clear();
-        _logger.logApp('Cleared all cached data from storage');
+        _logger.logApp('Cleared all cached data from storage including submitted batches');
+        
+        // Explicitly ensure submitted batches storage is cleared
+        await _batchBox!.delete('submitted_batches');
+        _logger.logApp('Explicitly cleared submitted batches from storage');
       }
       
-      _logger.logApp('Session cleared completely - all data removed');
+      _logger.logApp('Session cleared completely - all data removed', data: {
+        'submittedBatchesCleared': _submittedBatches.length,
+        'batchesCleared': _batches.length,
+      });
       notifyListeners();
     } catch (e, stackTrace) {
       _logger.logError('Error clearing session', error: e, stackTrace: stackTrace);
@@ -632,6 +639,9 @@ class BatchProvider extends ChangeNotifier {
 
     _setLoadingState(BatchLoadingState.loading);
     _currentSessionId = sessionId;
+    
+    // Reload submitted batches for the new session
+    await loadSubmittedBatches();
 
     try {
       final stopwatch = Stopwatch()..start();
@@ -920,9 +930,20 @@ class BatchProvider extends ChangeNotifier {
         if (stored != null) {
           final batchesList = stored['batches'] as List?;
           if (batchesList != null) {
-            _submittedBatches = List<Map<String, dynamic>>.from(
+            // Filter submitted batches by current session ID
+            final allSubmittedBatches = List<Map<String, dynamic>>.from(
               batchesList.map((e) => Map<String, dynamic>.from(e))
             );
+            
+            // Only load batches for the current session
+            if (_currentSessionId != null) {
+              _submittedBatches = allSubmittedBatches
+                  .where((batch) => batch['sessionId'] == _currentSessionId)
+                  .toList();
+            } else {
+              // If no current session, don't load any submitted batches
+              _submittedBatches = [];
+            }
             notifyListeners();
           }
         }
