@@ -454,11 +454,13 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
           submissionTimestamp: DateTime.now(),
           batchNumber: batch.batchNumber ?? batch.batchId ?? '',
           itemName: batch.itemName ?? batch.productName ?? 'Unknown Item',
+          itemCode: batch.itemCode ?? widget.selectedItem?.itemCode,
           expiryDate: batch.expiryDate,
           requestedQuantity: widget.selectedItem?.quantity ?? 0,
           submittedQuantity: quantity,
           rackName: selectedRackName,
           rackLocation: selectedRackName, // Use rackName as rackLocation since we don't have separate location info
+          locator: batch.locator ?? widget.selectedItem?.locator,
           extractedText: extractedText,
           capturedImage: _lastCapturedImageBytes != null ? Uint8List.fromList(_lastCapturedImageBytes!) : null,
           ocrConfidence: confidence,

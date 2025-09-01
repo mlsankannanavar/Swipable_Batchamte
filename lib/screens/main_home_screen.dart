@@ -599,6 +599,13 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
         final batchRackName = batch['submissionDetail']?['rackName'] ?? batch['rackName'];
         return batchRackName == selectedRack.rackName;
       }).toList();
+      
+      // Sort submitted items by locator position
+      itemsToShow.sort((a, b) {
+        final locatorA = a['submissionDetail']?['locator'] ?? a['locator'] ?? '';
+        final locatorB = b['submissionDetail']?['locator'] ?? b['locator'] ?? '';
+        return _compareLocators(locatorA, locatorB);
+      });
     } else {
       // Show available items from selected rack, excluding submitted items
       final batchProvider = Provider.of<BatchProvider>(context, listen: false);
@@ -618,6 +625,13 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
         return !itemBatches.any((batch) => 
             submittedBatchNumbers.contains(batch.batchNumber));
       }).toList();
+      
+      // Sort available items by locator position
+      itemsToShow.sort((a, b) {
+        final locatorA = a.locator ?? '';
+        final locatorB = b.locator ?? '';
+        return _compareLocators(locatorA, locatorB);
+      });
     }
 
     if (itemsToShow.isEmpty) {
@@ -660,17 +674,20 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
     String quantity;
     int batchCount = 0;
     String? selectedBatch;
+    String? locator;
 
     if (isSubmitted) {
       // Handle submitted batch data
       itemName = item['itemName'] ?? 'Unknown Item';
       quantity = item['quantity']?.toString() ?? '0';
       selectedBatch = item['batchNumber'];
+      locator = item['submissionDetail']?['locator'] ?? item['locator'];
       batchCount = 1; // Each submitted batch is one batch
     } else {
       // Handle regular rack item data
       itemName = item.itemName ?? 'Unknown Item';
       quantity = item.quantity?.toString() ?? '0';
+      locator = item.locator;
       batchCount = item.batches?.length ?? 0;
     }
 
@@ -761,32 +778,61 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
                     ],
                   ),
                 ),
-                if (isSubmitted) ...[
-                  Consumer<AppStateProvider>(
-                    builder: (context, appState, child) {
-                      return Column(
-                        children: [
-                          // Only show More Details button if setting is enabled
-                          if (appState.showMoreDetailsButton) ...[
-                            ElevatedButton.icon(
-                              onPressed: () => _openSubmissionDetails(item),
-                              icon: const Icon(Icons.info_outline, size: 16),
-                              label: const Text('More Details'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.blue.shade600,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                minimumSize: Size.zero,
-                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                textStyle: const TextStyle(fontSize: 12),
-                              ),
-                            ),
-                          ],
-                        ],
-                      );
-                    },
-                  ),
-                ],
+                // Locator information at the right edge
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    if (locator != null && locator.isNotEmpty) ...[
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: Colors.blue.shade200,
+                            width: 1,
+                          ),
+                        ),
+                        child: Text(
+                          'Loc: $locator',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue.shade700,
+                          ),
+                        ),
+                      ),
+                    ],
+                    if (isSubmitted) ...[
+                      if (locator != null && locator.isNotEmpty)
+                        const SizedBox(height: 6),
+                      Consumer<AppStateProvider>(
+                        builder: (context, appState, child) {
+                          return Column(
+                            children: [
+                              // Only show More Details button if setting is enabled
+                              if (appState.showMoreDetailsButton) ...[
+                                ElevatedButton.icon(
+                                  onPressed: () => _openSubmissionDetails(item),
+                                  icon: const Icon(Icons.info_outline, size: 16),
+                                  label: const Text('More Details'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.blue.shade600,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                    minimumSize: Size.zero,
+                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                    textStyle: const TextStyle(fontSize: 12),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          );
+                        },
+                      ),
+                    ],
+                  ],
+                ),
               ],
             ),
           ),
@@ -833,5 +879,45 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
         ),
       ),
     );
+  }
+
+  /// Compare locator strings for sorting
+  /// Handles alphanumeric sorting for locator positions like A1, A2, B1, B2, etc.
+  int _compareLocators(String locatorA, String locatorB) {
+    if (locatorA.isEmpty && locatorB.isEmpty) return 0;
+    if (locatorA.isEmpty) return 1; // Empty locators go to the end
+    if (locatorB.isEmpty) return -1;
+    
+    // Extract alphabetic and numeric parts
+    final regExp = RegExp(r'^([A-Za-z]*)(\d*)(.*)$');
+    final matchA = regExp.firstMatch(locatorA);
+    final matchB = regExp.firstMatch(locatorB);
+    
+    if (matchA == null || matchB == null) {
+      // Fallback to simple string comparison
+      return locatorA.compareTo(locatorB);
+    }
+    
+    final alphaA = matchA.group(1) ?? '';
+    final alphaB = matchB.group(1) ?? '';
+    final numA = int.tryParse(matchA.group(2) ?? '') ?? 0;
+    final numB = int.tryParse(matchB.group(2) ?? '') ?? 0;
+    final restA = matchA.group(3) ?? '';
+    final restB = matchB.group(3) ?? '';
+    
+    // First compare alphabetic parts
+    final alphaComparison = alphaA.compareTo(alphaB);
+    if (alphaComparison != 0) {
+      return alphaComparison;
+    }
+    
+    // Then compare numeric parts
+    final numComparison = numA.compareTo(numB);
+    if (numComparison != 0) {
+      return numComparison;
+    }
+    
+    // Finally compare the rest
+    return restA.compareTo(restB);
   }
 }

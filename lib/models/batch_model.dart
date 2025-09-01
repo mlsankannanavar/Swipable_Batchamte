@@ -4,6 +4,9 @@ class BatchModel {
   final String sessionId;
   final String? productName; // legacy
   final String? itemName; // new API field
+  final String? itemCode;
+  final String? locator;
+  final String? rackName;
   final String? manufacturingDate;
   final String? expiryDate;
   final String? batchNumber;
@@ -20,8 +23,11 @@ class BatchModel {
     String? id,
     required this.batchId,
     required this.sessionId,
-  this.productName,
-  this.itemName,
+    this.productName,
+    this.itemName,
+    this.itemCode,
+    this.locator,
+    this.rackName,
     this.manufacturingDate,
     this.expiryDate,
     this.batchNumber,
@@ -43,11 +49,14 @@ class BatchModel {
       id: json['id']?.toString(),
       batchId: json['batch_id']?.toString() ?? '',
       sessionId: sessionId,
-  productName: json['product_name']?.toString(),
-  itemName: json['item_name']?.toString(),
+      productName: json['product_name']?.toString(),
+      itemName: json['item_name']?.toString(),
+      itemCode: json['item_code']?.toString(),
+      locator: json['locator']?.toString(),
+      rackName: json['rack']?.toString(),
       manufacturingDate: json['manufacturing_date']?.toString(),
       expiryDate: json['expiry_date']?.toString(),
-  batchNumber: json['batch_number']?.toString() ?? json['batch_id']?.toString(),
+      batchNumber: json['batch_number']?.toString() ?? json['batch_id']?.toString(),
       lotNumber: json['lot_number']?.toString(),
       manufacturer: json['manufacturer']?.toString(),
       status: json['status']?.toString() ?? 'Active',
@@ -72,6 +81,9 @@ class BatchModel {
       batchId: batchNumber,
       sessionId: sessionId,
       itemName: batchData['item_name']?.toString(),
+      itemCode: batchData['item_code']?.toString(),
+      locator: batchData['locator']?.toString(),
+      rackName: batchData['rack']?.toString(),
       expiryDate: batchData['expiry_date']?.toString(),
       batchNumber: batchNumber,
       status: 'Active',

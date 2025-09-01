@@ -72,6 +72,9 @@ class RackModel {
 
 class ItemModel {
   final String itemName;
+  final String? itemCode;
+  final String? locator;
+  final String? rackName;
   final int quantity;
   final List<BatchInfo> batches;
   final String? selectedBatch;
@@ -79,6 +82,9 @@ class ItemModel {
 
   ItemModel({
     required this.itemName,
+    this.itemCode,
+    this.locator,
+    this.rackName,
     required this.quantity,
     required this.batches,
     this.selectedBatch,
@@ -89,6 +95,9 @@ class ItemModel {
   factory ItemModel.fromJson(Map<String, dynamic> json) {
     return ItemModel(
       itemName: json['itemName'] ?? '',
+      itemCode: json['itemCode'],
+      locator: json['locator'],
+      rackName: json['rackName'],
       quantity: json['quantity'] ?? 0,
       batches: (json['batches'] as List<dynamic>?)
           ?.map((batch) => BatchInfo.fromJson(batch))
@@ -102,6 +111,9 @@ class ItemModel {
   Map<String, dynamic> toJson() {
     return {
       'itemName': itemName,
+      'itemCode': itemCode,
+      'locator': locator,
+      'rackName': rackName,
       'quantity': quantity,
       'batches': batches.map((batch) => batch.toJson()).toList(),
       'selectedBatch': selectedBatch,
@@ -112,6 +124,9 @@ class ItemModel {
   // Copy with method
   ItemModel copyWith({
     String? itemName,
+    String? itemCode,
+    String? locator,
+    String? rackName,
     int? quantity,
     List<BatchInfo>? batches,
     String? selectedBatch,
@@ -119,6 +134,9 @@ class ItemModel {
   }) {
     return ItemModel(
       itemName: itemName ?? this.itemName,
+      itemCode: itemCode ?? this.itemCode,
+      locator: locator ?? this.locator,
+      rackName: rackName ?? this.rackName,
       quantity: quantity ?? this.quantity,
       batches: batches ?? this.batches,
       selectedBatch: selectedBatch ?? this.selectedBatch,

@@ -79,8 +79,35 @@ class BatchCardWidget extends StatelessWidget {
                       ],
                     ),
                   ),
-                  if (showExpiryStatus)
-                    _buildExpiryStatusChip(),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      if (batch.locator != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: Colors.blue.shade200,
+                              width: 1,
+                            ),
+                          ),
+                          child: Text(
+                            'Loc: ${batch.locator}',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue.shade700,
+                            ),
+                          ),
+                        ),
+                      if (batch.locator != null && showExpiryStatus)
+                        const SizedBox(height: 6),
+                      if (showExpiryStatus)
+                        _buildExpiryStatusChip(),
+                    ],
+                  ),
                 ],
               ),
               
@@ -132,6 +159,15 @@ class BatchCardWidget extends StatelessWidget {
                 fontFamily: 'monospace',
               ),
             ),
+            if (batch.locator != null)
+              Text(
+                'Locator: ${batch.locator}',
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: Colors.blue,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             if (batch.expiryDate != null)
               Text(
                 'Expires: ${_formatDate(batch.expiryDate!)}',
@@ -204,6 +240,12 @@ class BatchCardWidget extends StatelessWidget {
   Widget _buildBatchDetails() {
     return Column(
       children: [
+        if (batch.itemCode != null)
+          _buildDetailRow(Icons.qr_code, 'Item Code', batch.itemCode!),
+          
+        if (batch.rackName != null)
+          _buildDetailRow(Icons.shelves, 'Rack', batch.rackName!),
+        
         if (batch.lotNumber != null)
           _buildDetailRow(Icons.inventory, 'Lot Number', batch.lotNumber!),
         

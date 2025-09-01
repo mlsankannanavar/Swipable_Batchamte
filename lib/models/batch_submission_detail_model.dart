@@ -9,11 +9,13 @@ class BatchSubmissionDetail {
   // Basic batch information
   final String batchNumber;
   final String itemName;
+  final String? itemCode;
   final String? expiryDate;
   final int requestedQuantity;
   final int submittedQuantity;
   final String? rackName; // Add rack information
   final String? rackLocation; // Add rack location info
+  final String? locator; // Add locator information
   
   // OCR and matching data
   final String extractedText;
@@ -49,11 +51,13 @@ class BatchSubmissionDetail {
     required this.submissionTimestamp,
     required this.batchNumber,
     required this.itemName,
+    this.itemCode,
     this.expiryDate,
     required this.requestedQuantity,
     required this.submittedQuantity,
     this.rackName,
     this.rackLocation,
+    this.locator,
     required this.extractedText,
     this.capturedImage,
     required this.ocrConfidence,
@@ -86,11 +90,13 @@ class BatchSubmissionDetail {
       ),
       batchNumber: json['batchNumber'] ?? '',
       itemName: json['itemName'] ?? '',
+      itemCode: json['itemCode'],
       expiryDate: json['expiryDate'],
       requestedQuantity: json['requestedQuantity'] ?? 0,
       submittedQuantity: json['submittedQuantity'] ?? 0,
       rackName: json['rackName'],
       rackLocation: json['rackLocation'],
+      locator: json['locator'],
       extractedText: json['extractedText'] ?? '',
       capturedImage: json['capturedImage'] != null 
           ? Uint8List.fromList(List<int>.from(json['capturedImage']))
@@ -126,11 +132,13 @@ class BatchSubmissionDetail {
       'submissionTimestamp': submissionTimestamp.millisecondsSinceEpoch,
       'batchNumber': batchNumber,
       'itemName': itemName,
+      'itemCode': itemCode,
       'expiryDate': expiryDate,
       'requestedQuantity': requestedQuantity,
       'submittedQuantity': submittedQuantity,
       'rackName': rackName,
       'rackLocation': rackLocation,
+      'locator': locator,
       'extractedText': extractedText,
       'capturedImage': capturedImage?.toList(),
       'ocrConfidence': ocrConfidence,
