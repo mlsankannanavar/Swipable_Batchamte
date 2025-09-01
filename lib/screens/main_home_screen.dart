@@ -396,42 +396,43 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
                 color: AppColors.primary,
                 size: 24,
               ),
-              items: session.racks
-                  .map((rack) => rack) // Create a copy
-                  .toList()
-                  ..sort((a, b) => _compareLocators(a.rackName, b.rackName)) // Sort using our locator comparison method
-                  .map((rack) {
-                return DropdownMenuItem<String>(
-                  value: rack.rackName,
-                  child: Row(
-                    children: [
-                      Icon(Icons.inventory_2, 
-                          color: AppColors.primary, size: 20),
-                      const SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            rack.rackName,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 16,
+              items: (() {
+                // Sort racks and convert to DropdownMenuItem
+                final sortedRacks = session.racks.toList()
+                  ..sort((a, b) => _compareLocators(a.rackName, b.rackName));
+                return sortedRacks.map((rack) {
+                  return DropdownMenuItem<String>(
+                    value: rack.rackName,
+                    child: Row(
+                      children: [
+                        Icon(Icons.inventory_2, 
+                            color: AppColors.primary, size: 20),
+                        const SizedBox(width: 12),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              rack.rackName,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 16,
+                              ),
                             ),
-                          ),
-                          Text(
-                            '${rack.items.length} items',
-                            style: TextStyle(
-                              color: Colors.grey.shade600,
-                              fontSize: 12,
+                            Text(
+                              '${rack.items.length} items',
+                              style: TextStyle(
+                                color: Colors.grey.shade600,
+                                fontSize: 12,
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                );
-              }).toList(),
+                          ],
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList();
+              })(),
               onChanged: (String? value) {
                 if (value != null) {
                   setState(() {
@@ -527,42 +528,43 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
                 color: Colors.green,
                 size: 24,
               ),
-              items: session.racks
-                  .map((rack) => rack) // Create a copy
-                  .toList()
-                  ..sort((a, b) => _compareLocators(a.rackName, b.rackName)) // Sort using our locator comparison method
-                  .map((rack) {
-                return DropdownMenuItem<String>(
-                  value: rack.rackName,
-                  child: Row(
-                    children: [
-                      Icon(Icons.inventory_2, 
-                          color: AppColors.primary, size: 20),
-                      const SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            rack.rackName,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 16,
+              items: (() {
+                // Sort racks and convert to DropdownMenuItem
+                final sortedRacks = session.racks.toList()
+                  ..sort((a, b) => _compareLocators(a.rackName, b.rackName));
+                return sortedRacks.map((rack) {
+                  return DropdownMenuItem<String>(
+                    value: rack.rackName,
+                    child: Row(
+                      children: [
+                        Icon(Icons.inventory_2, 
+                            color: AppColors.primary, size: 20),
+                        const SizedBox(width: 12),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              rack.rackName,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 16,
+                              ),
                             ),
-                          ),
-                          Text(
-                            '${rack.items.length} items',
-                            style: TextStyle(
-                              color: Colors.grey.shade600,
-                              fontSize: 12,
+                            Text(
+                              '${rack.items.length} items',
+                              style: TextStyle(
+                                color: Colors.grey.shade600,
+                                fontSize: 12,
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                );
-              }).toList(),
+                          ],
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList();
+              })(),
               onChanged: (String? value) {
                 if (value != null) {
                   setState(() {
