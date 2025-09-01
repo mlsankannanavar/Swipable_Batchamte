@@ -396,7 +396,11 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
                 color: AppColors.primary,
                 size: 24,
               ),
-              items: session.racks.map((rack) {
+              items: session.racks
+                  .map((rack) => rack) // Create a copy
+                  .toList()
+                  ..sort((a, b) => _compareLocators(a.rackName, b.rackName)) // Sort using our locator comparison method
+                  .map((rack) {
                 return DropdownMenuItem<String>(
                   value: rack.rackName,
                   child: Row(
@@ -523,7 +527,11 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
                 color: Colors.green,
                 size: 24,
               ),
-              items: session.racks.map((rack) {
+              items: session.racks
+                  .map((rack) => rack) // Create a copy
+                  .toList()
+                  ..sort((a, b) => _compareLocators(a.rackName, b.rackName)) // Sort using our locator comparison method
+                  .map((rack) {
                 return DropdownMenuItem<String>(
                   value: rack.rackName,
                   child: Row(
@@ -672,7 +680,6 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
   Widget _buildItemCard(dynamic item, SessionProvider sessionProvider, bool isSubmitted) {
     String itemName;
     String quantity;
-    int batchCount = 0;
     String? selectedBatch;
     String? locator;
 
@@ -682,13 +689,11 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
       quantity = item['quantity']?.toString() ?? '0';
       selectedBatch = item['batchNumber'];
       locator = item['submissionDetail']?['locator'] ?? item['locator'];
-      batchCount = 1; // Each submitted batch is one batch
     } else {
       // Handle regular rack item data
       itemName = item.itemName ?? 'Unknown Item';
       quantity = item.quantity?.toString() ?? '0';
       locator = item.locator;
-      batchCount = item.batches?.length ?? 0;
     }
 
     return Card(
@@ -713,99 +718,74 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
           onTap: isSubmitted ? null : () => _openOCRScanner(item), // Only allow tap for available items
           child: Padding(
             padding: const EdgeInsets.all(16.0),
-            child: Row(
+            child: Column(
               children: [
-                // Add status icon
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: isSubmitted ? Colors.green : AppColors.primary,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    isSubmitted ? Icons.check : Icons.qr_code_scanner,
-                    color: Colors.white,
-                    size: 16,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        itemName,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
+                // Main row with icon, content, and buttons
+                Row(
+                  children: [
+                    // Status icon
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: isSubmitted ? Colors.green : AppColors.primary,
+                        shape: BoxShape.circle,
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Quantity: $quantity',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey.shade600,
-                        ),
+                      child: Icon(
+                        isSubmitted ? Icons.check : Icons.qr_code_scanner,
+                        color: Colors.white,
+                        size: 16,
                       ),
-                      if (!isSubmitted) ...[
-                        Text(
-                          'Batches: $batchCount',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey.shade600,
+                    ),
+                    const SizedBox(width: 12),
+                    // Expanded content area
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Item name - continuous in one row then wrap
+                          Text(
+                            itemName,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                        ),
-                      ],
-                      if (isSubmitted && selectedBatch != null) ...[
-                        const SizedBox(height: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.green.shade100,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            'Batch: $selectedBatch',
+                          const SizedBox(height: 8),
+                          // Quantity with larger font
+                          Text(
+                            'Quantity: $quantity',
                             style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.green.shade700,
-                              fontWeight: FontWeight.w500,
+                              fontSize: 16, // Increased from 14
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey.shade700,
                             ),
                           ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                // Locator information at the right edge
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    if (locator != null && locator.isNotEmpty) ...[
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.blue.shade50,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: Colors.blue.shade200,
-                            width: 1,
-                          ),
-                        ),
-                        child: Text(
-                          'Loc: $locator',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.blue.shade700,
-                          ),
-                        ),
+                          // Batch info for submitted items only
+                          if (isSubmitted && selectedBatch != null) ...[
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.green.shade100,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                'Batch: $selectedBatch',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.green.shade700,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
-                    ],
+                    ),
+                    // More Details button for submitted items
                     if (isSubmitted) ...[
-                      if (locator != null && locator.isNotEmpty)
-                        const SizedBox(height: 6),
                       Consumer<AppStateProvider>(
                         builder: (context, appState, child) {
                           return Column(
@@ -833,6 +813,34 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
                     ],
                   ],
                 ),
+                // Locator at bottom right
+                if (locator != null && locator.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: Colors.blue.shade200,
+                            width: 1,
+                          ),
+                        ),
+                        child: Text(
+                          'Loc: $locator',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue.shade700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),
