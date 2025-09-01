@@ -813,14 +813,6 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
           
           // Stay on available items tab so user can continue with next item
           _getTabController().animateTo(0);
-          
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('${item.itemName} submitted successfully with batch $selectedBatch! Ready for next item.'),
-              backgroundColor: Colors.green,
-              duration: const Duration(seconds: 4),
-            ),
-          );
         }
       }
       
