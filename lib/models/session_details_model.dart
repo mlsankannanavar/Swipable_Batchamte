@@ -21,15 +21,52 @@ class SessionDetailsModel {
 
   // Factory constructor from JSON
   factory SessionDetailsModel.fromJson(Map<String, dynamic> json, String sessionId) {
+    // Extract quantity mapping from sessionDetails.itemsWithRemNumbers
+    final Map<String, int> itemCodeToQuantity = {};
+    final sessionDetails = json['sessionDetails'] as Map<String, dynamic>?;
+    if (sessionDetails != null) {
+      final itemsWithRemNumbers = sessionDetails['itemsWithRemNumbers'] as List<dynamic>?;
+      if (itemsWithRemNumbers != null) {
+        for (final item in itemsWithRemNumbers) {
+          final itemCode = item['itemCode'] as String?;
+          final remNumber = item['remNumber'] as int?;
+          if (itemCode != null && remNumber != null) {
+            itemCodeToQuantity[itemCode] = remNumber;
+          }
+        }
+      }
+    }
+
+    // Parse racks and update item quantities
+    final racks = (json['racks'] as List<dynamic>?)
+        ?.map((rack) {
+          final rackData = rack as Map<String, dynamic>;
+          final items = (rackData['items'] as List<dynamic>?)
+              ?.map((item) {
+                final itemData = item as Map<String, dynamic>;
+                final itemCode = itemData['itemCode'] as String?;
+                // Set quantity from remNumber mapping if available
+                if (itemCode != null && itemCodeToQuantity.containsKey(itemCode)) {
+                  itemData['quantity'] = itemCodeToQuantity[itemCode];
+                }
+                return ItemModel.fromJson(itemData);
+              })
+              .toList() ?? [];
+          
+          return RackModel(
+            rackName: rackData['rackName'] ?? '',
+            items: items,
+          );
+        })
+        .toList() ?? [];
+
     return SessionDetailsModel(
       unitCode: json['unitCode'] ?? '',
       storeId: json['storeId'] ?? '',
       salesOrderNumber: json['salesOrderNumber'] ?? '',
       purchaseOrderNumber: json['purchaseOrderNumber'] ?? '',
       sessionId: sessionId,
-      racks: (json['racks'] as List<dynamic>?)
-          ?.map((rack) => RackModel.fromJson(rack))
-          .toList() ?? [],
+      racks: racks,
     );
   }
 
