@@ -39,7 +39,6 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
   String? _capturedImagePath;
   String? _extractedText;
   List<int>? _lastCapturedImageBytes;
-  String? _lastSubmittedBatchNumber; // Track last submitted batch
   
   // Performance tracking
   Duration? _ocrProcessingTime;
@@ -326,22 +325,25 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
         alternativeMatches: [], // Empty for now
       );
 
-      // Show success message
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Batch ${batchMatch.batchNumber} submitted successfully!'),
-          backgroundColor: Colors.green,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-
-      // Navigate back or restart scanning
-      _resetForNextScan();
+      // Automatically navigate back to available batches screen
+      _navigateBackToAvailableBatches();
 
     } catch (e) {
       loggingProvider.logError('Error submitting batch: $e');
       _showSimpleErrorDialog('Submission Error', 'Failed to submit batch: ${e.toString()}');
     }
+  }
+
+  /// Navigate back to available batches screen after successful submission
+  void _navigateBackToAvailableBatches() {
+    final loggingProvider = Provider.of<LoggingProvider>(context, listen: false);
+    loggingProvider.logApp('Auto-navigating back to available batches after successful submission');
+    
+    // Return to previous screen with success result
+    Navigator.pop(context, {
+      'success': true,
+      'message': 'Batch submitted successfully',
+    });
   }
 
   /// Reset scanner for next scan
@@ -461,12 +463,8 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
         
         await batchProvider.addSubmittedBatchDetail(submissionDetail);
         
-        // Store the submitted batch number for returning to main screen
-        _lastSubmittedBatchNumber = batch.batchNumber ?? batch.batchId ?? '';
-        
         loggingProvider.logSuccess('Batch submitted successfully');
-        _showSuccessDialog('Batch submitted successfully!');
-        _resetCapture(); // Reset for next scan
+        _navigateBackToAvailableBatches(); // Auto-navigate back after success
       } else {
         batchProvider.incrementErrorCount();
         loggingProvider.logError('Batch submission failed: ${resp.message}');
@@ -527,35 +525,6 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
       
       _showInfoDialog('Failed to submit batch: ${e.toString()}');
     }
-  }
-
-  void _showSuccessDialog(String message) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        icon: const Icon(
-          Icons.check_circle,
-          color: Colors.green,
-          size: 48,
-        ),
-        title: const Text('Success'),
-        content: Text(message),
-        actions: [
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).pop(); // Close dialog
-              // Return to main screen with success result
-              Navigator.of(context).pop({
-                'success': true,
-                'selectedBatch': _lastSubmittedBatchNumber,
-                'message': message,
-              });
-            },
-            child: const Text('Continue'),
-          ),
-        ],
-      ),
-    );
   }
 
   void _showInfoDialog(String message) {
