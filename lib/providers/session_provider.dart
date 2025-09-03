@@ -372,6 +372,24 @@ class SessionProvider extends ChangeNotifier {
     _logger.logApp('Partial submission cleared for item: $itemName');
   }
 
+  // Clear all partial submissions (useful when starting fresh)
+  Future<void> clearAllPartialSubmissions() async {
+    try {
+      _partialSubmissions.clear();
+      
+      // Remove from storage as well
+      if (_sessionBox != null) {
+        await _sessionBox!.delete('partial_submissions');
+        _logger.logApp('All partial submissions cleared from storage');
+      }
+      
+      _logger.logApp('All partial submission data cleared completely');
+      notifyListeners();
+    } catch (e, stackTrace) {
+      _logger.logError('Error clearing partial submissions', error: e, stackTrace: stackTrace);
+    }
+  }
+
   // Get item by name from selected rack
   ItemModel? getItemByName(String itemName) {
     return selectedRack?.items.firstWhere(
@@ -394,13 +412,16 @@ class SessionProvider extends ChangeNotifier {
       _setLoadingState(SessionLoadingState.idle);
       _errorMessage = null;
       
+      // Clear partial submissions data (both in-memory and stored)
+      _partialSubmissions.clear();
+      
       // Clear cached session data from storage
       if (_sessionBox != null) {
         await _sessionBox!.clear();
         _logger.logApp('Cleared cached session data from storage');
       }
       
-      _logger.logApp('Session cleared completely');
+      _logger.logApp('Session and all partial submission data cleared completely');
       notifyListeners();
     } catch (e, stackTrace) {
       _logger.logError('Error clearing session', error: e, stackTrace: stackTrace);
