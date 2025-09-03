@@ -143,7 +143,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
         return Scaffold(
           backgroundColor: AppColors.primary,
           appBar: AppBar(
-            backgroundColor: Colors.white,
+            backgroundColor: Theme.of(context).colorScheme.surface,
             title: Row(
               children: [
                 // App logo/icon on the left
@@ -178,12 +178,12 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
               ? PreferredSize(
                   preferredSize: const Size.fromHeight(48.0),
                   child: Container(
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.surface,
                     child: TabBar(
                       controller: _getTabController(),
                       indicatorColor: AppColors.primary,
                       labelColor: AppColors.primary,
-                      unselectedLabelColor: Colors.grey,
+                      unselectedLabelColor: Theme.of(context).colorScheme.onSurfaceVariant,
                       tabs: const [
                         Tab(text: 'Available Items'),
                         Tab(text: 'Submitted Items'),

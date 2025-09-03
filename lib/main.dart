@@ -29,35 +29,65 @@ class BatchMateApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => SessionProvider()),
         ChangeNotifierProvider(create: (_) => LoggingProvider()),
       ],
-      child: MaterialApp(
-        title: 'BatchMate',
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: AppColors.primary,
-            brightness: Brightness.light,
-          ),
-          appBarTheme: const AppBarTheme(
-            centerTitle: true,
-            elevation: 0,
-            surfaceTintColor: Colors.transparent,
-          ),
-          elevatedButtonTheme: ElevatedButtonThemeData(
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+      child: Consumer<AppStateProvider>(
+        builder: (context, appStateProvider, child) {
+          return MaterialApp(
+            title: 'BatchMate',
+            debugShowCheckedModeBanner: false,
+            theme: ThemeData(
+              useMaterial3: true,
+              colorScheme: ColorScheme.fromSeed(
+                seedColor: AppColors.primary,
+                brightness: Brightness.light,
+              ),
+              appBarTheme: const AppBarTheme(
+                centerTitle: true,
+                elevation: 0,
+                surfaceTintColor: Colors.transparent,
+              ),
+              elevatedButtonTheme: ElevatedButtonThemeData(
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+              floatingActionButtonTheme: FloatingActionButtonThemeData(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
-          ),
-          floatingActionButtonTheme: FloatingActionButtonThemeData(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+            darkTheme: ThemeData(
+              useMaterial3: true,
+              colorScheme: ColorScheme.fromSeed(
+                seedColor: AppColors.primary,
+                brightness: Brightness.dark,
+              ),
+              appBarTheme: const AppBarTheme(
+                centerTitle: true,
+                elevation: 0,
+                surfaceTintColor: Colors.transparent,
+              ),
+              elevatedButtonTheme: ElevatedButtonThemeData(
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+              floatingActionButtonTheme: FloatingActionButtonThemeData(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
             ),
-          ),
-        ),
-        home: const SplashScreen(),
+            themeMode: appStateProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
+            home: const SplashScreen(),
+          );
+        },
       ),
     );
   }

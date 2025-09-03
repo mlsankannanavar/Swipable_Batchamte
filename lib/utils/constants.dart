@@ -1,6 +1,6 @@
 class Constants {
   // API Configuration
-  static const String baseUrl = 'https://test-backend-batchmate.medha-analytics.ai/';
+  static const String baseUrl = 'https://backend-batchmate.medha-analytics.ai/';
   static const String apiBaseUrl = baseUrl; // Alias for compatibility
   static const String healthEndpoint = 'health';
   static const String filteredBatchesEndpoint = 'api/filtered-batches';

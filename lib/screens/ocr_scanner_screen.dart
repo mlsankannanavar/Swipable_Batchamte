@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:provider/provider.dart';
 import 'dart:convert';
-import 'dart:io';
 import 'dart:typed_data';
 
 import '../providers/logging_provider.dart';
@@ -1079,17 +1078,18 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
   Widget _buildCapturedImageView() {
     return Column(
       children: [
-        // Captured image
+        // White background instead of captured image to avoid showing camera/image background
         Expanded(
           flex: 3,
           child: Container(
             width: double.infinity,
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey),
-            ),
-            child: Image.file(
-              File(_capturedImagePath!),
-              fit: BoxFit.contain,
+            color: Colors.white,
+            child: const Center(
+              child: Icon(
+                Icons.check_circle_outline,
+                size: 80,
+                color: Colors.grey,
+              ),
             ),
           ),
         ),
@@ -1251,73 +1251,37 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
           topRight: Radius.circular(20),
         ),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          // Gallery button
-          Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              IconButton(
-                onPressed: _pickFromGallery,
-                icon: const Icon(Icons.photo_library),
-                iconSize: 32,
-              ),
-              const Text(
-                'Gallery',
-                style: TextStyle(fontSize: 12),
-              ),
-            ],
-          ),
-          
-          // Capture button
-          Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              GestureDetector(
-                onTap: _captureImage,
-                child: Container(
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: Colors.white,
-                      width: 3,
-                    ),
-                  ),
-                  child: const Icon(
-                    Icons.camera_alt,
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            GestureDetector(
+              onTap: _captureImage,
+              child: Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  shape: BoxShape.circle,
+                  border: Border.all(
                     color: Colors.white,
-                    size: 24,
+                    width: 3,
                   ),
                 ),
+                child: const Icon(
+                  Icons.camera_alt,
+                  color: Colors.white,
+                  size: 24,
+                ),
               ),
-              const SizedBox(height: 4),
-              const Text(
-                'Capture',
-                style: TextStyle(fontSize: 12),
-              ),
-            ],
-          ),
-          
-          // Settings button
-          Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              IconButton(
-                onPressed: _showOCRSettings,
-                icon: const Icon(Icons.settings),
-                iconSize: 32,
-              ),
-              const Text(
-                'Settings',
-                style: TextStyle(fontSize: 12),
-              ),
-            ],
-          ),
-        ],
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Capture',
+              style: TextStyle(fontSize: 12),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1477,15 +1441,6 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
     }
   }
 
-  Future<void> _pickFromGallery() async {
-    final loggingProvider = Provider.of<LoggingProvider>(context, listen: false);
-    loggingProvider.logOCR('Picking image from gallery');
-
-    // Implementation for picking from gallery
-    // This would typically use image_picker package
-    loggingProvider.logApp('Gallery picker functionality to be implemented');
-  }
-
   void _resetCapture() {
     final loggingProvider = Provider.of<LoggingProvider>(context, listen: false);
     loggingProvider.logOCR('Resetting capture');
@@ -1518,58 +1473,6 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
       
       // This would typically use the share package
     }
-  }
-
-  void _showOCRSettings() {
-    final loggingProvider = Provider.of<LoggingProvider>(context, listen: false);
-    loggingProvider.logApp('OCR settings opened');
-
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Padding(
-              padding: EdgeInsets.all(16),
-              child: Text(
-                'OCR Settings',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.language),
-              title: const Text('Language'),
-              subtitle: const Text('English'),
-              onTap: () {
-                Navigator.pop(context);
-                // Language selection implementation
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.tune),
-              title: const Text('Recognition Mode'),
-              subtitle: const Text('Balanced'),
-              onTap: () {
-                Navigator.pop(context);
-                // Recognition mode selection implementation
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.info),
-              title: const Text('Tips'),
-              onTap: () {
-                Navigator.pop(context);
-                _showOCRTips();
-              },
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   void _showNoMatchesFoundDialog(String extractedText) {
@@ -1642,38 +1545,6 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
               foregroundColor: Colors.white,
             ),
             child: const Text('Retake'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showOCRTips() {
-    showDialog(
-      context: context,
-      barrierColor: Colors.black, // Completely opaque background to hide camera
-      builder: (context) => AlertDialog(
-        title: const Text('OCR Tips'),
-        content: const SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('For better text recognition:'),
-              SizedBox(height: 8),
-              Text('• Ensure good lighting'),
-              Text('• Hold the device steady'),
-              Text('• Position text clearly in frame'),
-              Text('• Avoid shadows and reflections'),
-              Text('• Use high contrast backgrounds'),
-              Text('• Clean the camera lens'),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Got it'),
           ),
         ],
       ),

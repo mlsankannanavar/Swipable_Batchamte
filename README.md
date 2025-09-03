@@ -117,7 +117,7 @@ The app connects to a backend API for batch data processing. Configure the follo
 
 ```dart
 class Constants {
-  static const String apiBaseUrl = 'https://test-backend-batchmate.medha-analytics.ai/';
+  static const String apiBaseUrl = 'https://backend-batchmate.medha-analytics.ai/';
   static const int apiTimeout = 30000; // 30 seconds
   static const String appVersion = '1.0.0';
 }
