@@ -213,14 +213,12 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
         String batchNumber;
         String itemName;
         String expiryDate;
-        int quantity = 0; // Default quantity
         
         if (batch is Map<String, dynamic>) {
           // Handle Map format
           batchNumber = (batch['batchNumber'] ?? batch['batch_number'] ?? batch['batchId'] ?? batch['batch_id'] ?? '').toString();
           itemName = (batch['itemName'] ?? batch['item_name'] ?? batch['productName'] ?? batch['product_name'] ?? '').toString();
           expiryDate = (batch['expiryDate'] ?? batch['expiry_date'] ?? '').toString();
-          quantity = (batch['quantity'] ?? 0) as int;
           
           // Store the original batch data for submission
           batchDataMap[batchNumber] = batch;
@@ -237,8 +235,30 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
             'itemName': itemName,
             'productName': batch?.productName,
             'expiryDate': expiryDate,
-            'quantity': batch?.quantity ?? 0,
           };
+        }
+        
+        // Use remaining quantity from selected item for partial submissions
+        int remainingQuantity = 0;
+        if (widget.selectedItem != null) {
+          remainingQuantity = widget.selectedItem!.remainingQuantity;
+          
+          // Log when using remaining quantity for partial submissions
+          if (widget.selectedItem!.submittedQuantity > 0) {
+            loggingProvider.logApp('Using remaining quantity for partial submission',
+                data: {
+                  'itemName': widget.selectedItem!.itemName,
+                  'originalQuantity': widget.selectedItem!.quantity,
+                  'submittedQuantity': widget.selectedItem!.submittedQuantity,
+                  'remainingQuantity': remainingQuantity,
+                });
+          }
+        }
+        // Fallback to batch quantity if no selected item (shouldn't happen in normal flow)
+        if (remainingQuantity <= 0) {
+          remainingQuantity = (batch is Map<String, dynamic>) 
+              ? (batch['quantity'] ?? 1) as int 
+              : (batch?.quantity ?? 1);
         }
         
         batchMatches.add(BatchMatch(
@@ -246,7 +266,7 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
           itemName: itemName,
           expiryDate: expiryDate,
           confidence: (result['confidence'] ?? 0.0).toDouble(),
-          requestedQuantity: quantity, // Use the item's quantity
+          requestedQuantity: remainingQuantity, // Use the remaining quantity for partial submissions
           rank: i + 1,
           itemCode: result['itemCode'],
           purchaseOrderNumber: result['purchaseOrderNumber'],
