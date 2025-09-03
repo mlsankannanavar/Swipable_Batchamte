@@ -525,9 +525,14 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
         
         await batchProvider.addSubmittedBatchDetail(submissionDetail);
         
-        // Update session provider with partial submission
+        // Update session provider with partial submission using the current selected item
         try {
-          await sessionProvider.submitItemPartially(widget.selectedItem?.itemName ?? '', quantity);
+          if (widget.selectedItem != null) {
+            await sessionProvider.submitItemPartially(widget.selectedItem!.itemName, quantity);
+            loggingProvider.logSuccess('Item quantity updated: ${widget.selectedItem!.itemName} - submitted $quantity');
+          } else {
+            loggingProvider.logError('Cannot update item quantity - no selected item available');
+          }
         } catch (e) {
           loggingProvider.logError('Failed to update session with partial submission: $e');
           // Continue with the submission process even if session update fails
