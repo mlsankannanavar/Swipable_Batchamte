@@ -681,20 +681,32 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
 
   Widget _buildItemCard(dynamic item, SessionProvider sessionProvider, bool isSubmitted) {
     String itemName;
-    String quantity;
+    String quantityText;
     String? selectedBatch;
     String? locator;
 
     if (isSubmitted) {
       // Handle submitted batch data
       itemName = item['itemName'] ?? 'Unknown Item';
-      quantity = item['quantity']?.toString() ?? '0';
+      final submittedQty = item['quantity']?.toString() ?? '0';
+      quantityText = 'Submitted: $submittedQty';
       selectedBatch = item['batchNumber'];
       locator = item['submissionDetail']?['locator'] ?? item['locator'];
     } else {
-      // Handle regular rack item data
+      // Handle regular rack item data - show requested and remaining
       itemName = item.itemName ?? 'Unknown Item';
-      quantity = item.quantity?.toString() ?? '0';
+      final requestedQty = item.quantity ?? 0;
+      final submittedQty = item.submittedQuantity ?? 0;
+      final remainingQty = requestedQty - submittedQty;
+      
+      if (submittedQty > 0) {
+        // Show both requested and remaining if partially submitted
+        quantityText = 'Requested: $requestedQty\nRemaining: $remainingQty';
+      } else {
+        // Show only requested if nothing submitted yet
+        quantityText = 'Requested: $requestedQty';
+      }
+      
       locator = item.locator;
     }
 
@@ -702,22 +714,55 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
       margin: const EdgeInsets.only(bottom: 12.0),
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
-      color: isSubmitted 
-          ? Colors.green.shade50  // Light green background for submitted items
-          : Colors.blue.shade50,  // Light blue background for available items
+      color: () {
+        if (isSubmitted) {
+          return Colors.green.shade50; // Light green background for submitted items
+        } else {
+          // For available items, check if partially submitted
+          final requestedQty = item.quantity ?? 0;
+          final submittedQty = item.submittedQuantity ?? 0;
+          if (submittedQty > 0 && submittedQty < requestedQty) {
+            return Colors.orange.shade50; // Light orange background for partially submitted
+          } else {
+            return Colors.blue.shade50; // Light blue background for available items
+          }
+        }
+      }(),
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12.0),
           border: Border.all(
-            color: isSubmitted 
-                ? Colors.green.withOpacity(0.3)
-                : AppColors.primary.withOpacity(0.3),
+            color: () {
+              if (isSubmitted) {
+                return Colors.green.withOpacity(0.3);
+              } else {
+                // For available items, check if partially submitted
+                final requestedQty = item.quantity ?? 0;
+                final submittedQty = item.submittedQuantity ?? 0;
+                if (submittedQty > 0 && submittedQty < requestedQty) {
+                  return Colors.orange.withOpacity(0.3); // Orange border for partially submitted
+                } else {
+                  return AppColors.primary.withOpacity(0.3); // Primary border for available items
+                }
+              }
+            }(),
             width: 1.0,
           ),
         ),
         child: InkWell(
           borderRadius: BorderRadius.circular(12.0),
-          onTap: isSubmitted ? null : () => _openOCRScanner(item), // Only allow tap for available items
+          onTap: () {
+            if (!isSubmitted) {
+              // Only allow tapping on available items with remaining quantity
+              final requestedQty = item.quantity ?? 0;
+              final submittedQty = item.submittedQuantity ?? 0;
+              final remainingQty = requestedQty - submittedQty;
+              
+              if (remainingQty > 0) {
+                _openOCRScanner(item);
+              }
+            }
+          },
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -729,11 +774,37 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
                     Container(
                       padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
-                        color: isSubmitted ? Colors.green : AppColors.primary,
+                        color: () {
+                          if (isSubmitted) {
+                            return Colors.green;
+                          } else {
+                            // For available items, check if partially submitted
+                            final requestedQty = item.quantity ?? 0;
+                            final submittedQty = item.submittedQuantity ?? 0;
+                            if (submittedQty > 0 && submittedQty < requestedQty) {
+                              return Colors.orange; // Partially submitted
+                            } else {
+                              return AppColors.primary; // Not submitted
+                            }
+                          }
+                        }(),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
-                        isSubmitted ? Icons.check : Icons.qr_code_scanner,
+                        () {
+                          if (isSubmitted) {
+                            return Icons.check;
+                          } else {
+                            // For available items, check if partially submitted
+                            final requestedQty = item.quantity ?? 0;
+                            final submittedQty = item.submittedQuantity ?? 0;
+                            if (submittedQty > 0 && submittedQty < requestedQty) {
+                              return Icons.timelapse; // Partially submitted
+                            } else {
+                              return Icons.qr_code_scanner; // Not submitted
+                            }
+                          }
+                        }(),
                         color: Colors.white,
                         size: 16,
                       ),
@@ -755,14 +826,16 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
                             overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 8),
-                          // Quantity with larger font
+                          // Quantity with larger font and support for multi-line
                           Text(
-                            'Quantity: $quantity',
+                            quantityText,
                             style: TextStyle(
                               fontSize: 16, // Increased from 14
                               fontWeight: FontWeight.w600,
                               color: Colors.grey.shade700,
                             ),
+                            maxLines: 2, // Allow for 2 lines to show requested and remaining
+                            overflow: TextOverflow.ellipsis,
                           ),
                           // Batch info for submitted items only
                           if (isSubmitted && selectedBatch != null) ...[

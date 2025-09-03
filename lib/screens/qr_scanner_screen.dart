@@ -107,6 +107,11 @@ class _QRScannerScreenState extends State<QRScannerScreen>
       elevation: 0,
       actions: [
         IconButton(
+          onPressed: _refreshCamera,
+          icon: const Icon(Icons.refresh_outlined),
+          tooltip: 'Refresh Camera',
+        ),
+        IconButton(
           onPressed: _toggleFlash,
           icon: Icon(_isFlashOn ? Icons.flash_on : Icons.flash_off),
           tooltip: 'Toggle Flash',
@@ -458,6 +463,36 @@ class _QRScannerScreenState extends State<QRScannerScreen>
       loggingProvider.logApp('Camera switched');
     } catch (e) {
       loggingProvider.logError('Failed to switch camera: $e');
+    }
+  }
+
+  /// Refresh camera to prevent freeze issues
+  void _refreshCamera() async {
+    final loggingProvider = Provider.of<LoggingProvider>(context, listen: false);
+    
+    try {
+      loggingProvider.logApp('Refreshing QR scanner camera to prevent freeze');
+      
+      // Dispose current scanner
+      await _scannerController.dispose();
+      
+      // Reinitialize scanner
+      _scannerController = MobileScannerController(
+        detectionSpeed: DetectionSpeed.noDuplicates,
+        facing: CameraFacing.back,
+        torchEnabled: _isFlashOn,
+      );
+      
+      // Update state
+      if (mounted) {
+        setState(() {
+          // Force rebuild with new controller
+        });
+      }
+      
+      loggingProvider.logSuccess('QR scanner camera refreshed successfully');
+    } catch (e) {
+      loggingProvider.logError('QR scanner camera refresh error: $e');
     }
   }
 

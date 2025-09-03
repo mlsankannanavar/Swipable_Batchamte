@@ -76,7 +76,8 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
       _ocrService = OcrService.instance;
       loggingProvider.logApp('Initializing OCR service');
       
-      final initialized = await _ocrService.initialize();
+      // Force reinitialize to ensure camera is fresh
+      final initialized = await _ocrService.reinitialize();
       if (mounted) {
         setState(() {
           _isCameraInitialized = initialized;
@@ -117,6 +118,44 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
       }
     } catch (e) {
       loggingProvider.logError('OCR service re-initialization failed: $e');
+      if (mounted) {
+        setState(() {
+          _isCameraInitialized = false;
+        });
+      }
+    }
+  }
+
+  /// Refresh camera to prevent freeze issues
+  void _refreshCamera() async {
+    if (!mounted) return;
+    
+    final loggingProvider = Provider.of<LoggingProvider>(context, listen: false);
+    
+    try {
+      loggingProvider.logApp('Refreshing camera to prevent freeze');
+      
+      // Set loading state
+      setState(() {
+        _isCameraInitialized = false;
+      });
+      
+      // Force reinitialize the camera
+      final initialized = await _ocrService.reinitialize();
+      
+      if (mounted) {
+        setState(() {
+          _isCameraInitialized = initialized;
+        });
+      }
+      
+      if (initialized == true) {
+        loggingProvider.logSuccess('Camera refreshed successfully');
+      } else {
+        loggingProvider.logError('Camera refresh failed');
+      }
+    } catch (e) {
+      loggingProvider.logError('Camera refresh error: $e');
       if (mounted) {
         setState(() {
           _isCameraInitialized = false;
@@ -486,6 +525,14 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
         
         await batchProvider.addSubmittedBatchDetail(submissionDetail);
         
+        // Update session provider with partial submission
+        try {
+          await sessionProvider.submitItemPartially(widget.selectedItem?.itemName ?? '', quantity);
+        } catch (e) {
+          loggingProvider.logError('Failed to update session with partial submission: $e');
+          // Continue with the submission process even if session update fails
+        }
+        
         // Store the submitted batch number for returning to main screen
         _lastSubmittedBatchNumber = batch.batchNumber ?? batch.batchId ?? '';
         
@@ -753,6 +800,12 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
         },
       ),
       actions: [
+        // Add refresh camera button to prevent freeze issues
+        IconButton(
+          onPressed: () => _refreshCamera(),
+          icon: const Icon(Icons.refresh_outlined),
+          tooltip: 'Refresh Camera',
+        ),
         if (_isCameraInitialized) ...[
           IconButton(
             onPressed: _toggleFlash,

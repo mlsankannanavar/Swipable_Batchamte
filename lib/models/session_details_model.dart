@@ -129,6 +129,18 @@ class SessionDetailsModel {
     return copyWith(racks: updatedRacks);
   }
 
+  // Update rack with partial item submission
+  SessionDetailsModel submitItemPartiallyInRack(String rackName, String itemName, int submittedQuantity) {
+    final updatedRacks = racks.map((rack) {
+      if (rack.rackName == rackName) {
+        return rack.submitItemPartially(itemName, submittedQuantity);
+      }
+      return rack;
+    }).toList();
+
+    return copyWith(racks: updatedRacks);
+  }
+
   // Get summary statistics
   Map<String, dynamic> get summaryStats {
     int totalBatches = 0;

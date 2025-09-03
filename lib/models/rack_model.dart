@@ -1,13 +1,11 @@
 class RackModel {
   final String rackName;
   final List<ItemModel> items;
-  final List<ItemModel> submittedItems;
 
   RackModel({
     required this.rackName,
     required this.items,
-    List<ItemModel>? submittedItems,
-  }) : submittedItems = submittedItems ?? [];
+  });
 
   // Factory constructor from JSON
   factory RackModel.fromJson(Map<String, dynamic> json) {
@@ -27,40 +25,57 @@ class RackModel {
     };
   }
 
-  // Get available (not submitted) items
+  // Get available (not fully submitted) items
   List<ItemModel> get availableItems {
-    final submittedItemNames = submittedItems.map((item) => item.itemName).toSet();
-    return items.where((item) => !submittedItemNames.contains(item.itemName)).toList();
+    return items.where((item) => !item.isFullySubmitted).toList();
   }
 
-  // Check if item is submitted
+  // Get submitted items (includes partially and fully submitted)
+  List<ItemModel> get submittedItems {
+    return items.where((item) => item.submittedQuantity > 0).toList();
+  }
+
+  // Check if item is submitted (has any submission)
   bool isItemSubmitted(String itemName) {
-    return submittedItems.any((item) => item.itemName == itemName);
+    return items.any((item) => item.itemName == itemName && item.submittedQuantity > 0);
   }
 
-  // Move item to submitted
+  // Partially submit item with specified quantity
+  RackModel submitItemPartially(String itemName, int submittedQuantity) {
+    final updatedItems = items.map((item) {
+      if (item.itemName == itemName) {
+        final newSubmittedQuantity = item.submittedQuantity + submittedQuantity;
+        return item.copyWith(
+          submittedQuantity: newSubmittedQuantity,
+          isSubmitted: newSubmittedQuantity >= item.quantity,
+        );
+      }
+      return item;
+    }).toList();
+
+    return RackModel(
+      rackName: rackName,
+      items: updatedItems,
+    );
+  }
+
+  // Move item to submitted (backward compatibility - submits full quantity)
   RackModel submitItem(ItemModel item) {
     if (isItemSubmitted(item.itemName)) {
       return this; // Already submitted
     }
     
-    return RackModel(
-      rackName: rackName,
-      items: items,
-      submittedItems: [...submittedItems, item],
-    );
+    return submitItemPartially(item.itemName, item.remainingQuantity);
   }
 
   // Copy with method
   RackModel copyWith({
     String? rackName,
     List<ItemModel>? items,
-    List<ItemModel>? submittedItems,
   }) {
     return RackModel(
       rackName: rackName ?? this.rackName,
       items: items ?? this.items,
-      submittedItems: submittedItems ?? this.submittedItems,
     );
   }
 
@@ -75,7 +90,8 @@ class ItemModel {
   final String? itemCode;
   final String? locator;
   final String? rackName;
-  final int quantity;
+  final int quantity; // Original requested quantity
+  final int submittedQuantity; // Quantity already submitted
   final List<BatchInfo> batches;
   final String? selectedBatch;
   final bool isSubmitted;
@@ -86,10 +102,17 @@ class ItemModel {
     this.locator,
     this.rackName,
     required this.quantity,
+    this.submittedQuantity = 0,
     required this.batches,
     this.selectedBatch,
     this.isSubmitted = false,
   });
+
+  // Computed property: remaining quantity
+  int get remainingQuantity => quantity - submittedQuantity;
+
+  // Computed property: is fully submitted
+  bool get isFullySubmitted => submittedQuantity >= quantity;
 
   // Factory constructor from JSON
   factory ItemModel.fromJson(Map<String, dynamic> json) {
@@ -99,6 +122,7 @@ class ItemModel {
       locator: json['locator'],
       rackName: json['rackName'],
       quantity: json['quantity'] ?? 0,
+      submittedQuantity: json['submittedQuantity'] ?? 0,
       batches: (json['batches'] as List<dynamic>?)
           ?.map((batch) => BatchInfo.fromJson(batch))
           .toList() ?? [],
@@ -115,6 +139,7 @@ class ItemModel {
       'locator': locator,
       'rackName': rackName,
       'quantity': quantity,
+      'submittedQuantity': submittedQuantity,
       'batches': batches.map((batch) => batch.toJson()).toList(),
       'selectedBatch': selectedBatch,
       'isSubmitted': isSubmitted,
@@ -128,6 +153,7 @@ class ItemModel {
     String? locator,
     String? rackName,
     int? quantity,
+    int? submittedQuantity,
     List<BatchInfo>? batches,
     String? selectedBatch,
     bool? isSubmitted,
@@ -138,6 +164,7 @@ class ItemModel {
       locator: locator ?? this.locator,
       rackName: rackName ?? this.rackName,
       quantity: quantity ?? this.quantity,
+      submittedQuantity: submittedQuantity ?? this.submittedQuantity,
       batches: batches ?? this.batches,
       selectedBatch: selectedBatch ?? this.selectedBatch,
       isSubmitted: isSubmitted ?? this.isSubmitted,

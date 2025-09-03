@@ -226,7 +226,39 @@ class SessionProvider extends ChangeNotifier {
       
       notifyListeners();
     } catch (e, stackTrace) {
-      _logger.logError('Failed to submit item: ${item.itemName} in rack $_selectedRackName',
+      _logger.logError('Failed to submit item with batch: ${item.itemName} in rack $_selectedRackName',
+          error: e,
+          stackTrace: stackTrace);
+      rethrow;
+    }
+  }
+
+  // Submit item with partial quantity
+  Future<void> submitItemPartially(String itemName, int submittedQuantity) async {
+    if (_currentSession == null || _selectedRackName == null) {
+      _logger.logWarning('Cannot submit item partially - no session or rack selected');
+      return;
+    }
+
+    try {
+      // Update the session model with partial submission
+      _currentSession = _currentSession!.submitItemPartiallyInRack(_selectedRackName!, itemName, submittedQuantity);
+      
+      // Save updated session to local storage
+      await _saveSessionToLocal();
+      
+      _logger.logApp('Item submitted partially successfully',
+          level: LogLevel.success,
+          data: {
+            'itemName': itemName,
+            'submittedQuantity': submittedQuantity,
+            'rackName': _selectedRackName,
+            'sessionId': _currentSession!.sessionId,
+          });
+      
+      notifyListeners();
+    } catch (e, stackTrace) {
+      _logger.logError('Failed to submit item partially: $itemName in rack $_selectedRackName',
           error: e,
           stackTrace: stackTrace);
       rethrow;
