@@ -118,9 +118,18 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
 
   @override
   Widget build(BuildContext context) {
-    return Consumer3<AppStateProvider, LoggingProvider, SessionProvider>(
-      builder: (context, appStateProvider, loggingProvider, sessionProvider, child) {
+    return Consumer4<AppStateProvider, LoggingProvider, SessionProvider, BatchProvider>(
+      builder: (context, appStateProvider, loggingProvider, sessionProvider, batchProvider, child) {
         final bool hasSession = sessionProvider.currentSession != null;
+        
+        // Sync session between providers when session is loaded
+        if (hasSession && sessionProvider.currentSessionId != null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) async {
+            if (batchProvider.currentSessionId != sessionProvider.currentSessionId) {
+              await batchProvider.loadBatchesForSession(sessionProvider.currentSessionId!);
+            }
+          });
+        }
         
         // Initialize tab controller when session is first loaded
         if (hasSession && _tabController == null) {
@@ -238,7 +247,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
                 controller: _getTabController(),
                 children: [
                   _buildAvailableItemsScreen(sessionProvider),
-                  _buildSubmittedItemsScreen(sessionProvider),
+                  _buildSubmittedItemsScreen(sessionProvider, batchProvider),
                 ],
               )
             : _buildWelcomeScreen(sessionProvider),
@@ -477,7 +486,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
     );
   }
 
-  Widget _buildSubmittedItemsScreen(SessionProvider sessionProvider) {
+  Widget _buildSubmittedItemsScreen(SessionProvider sessionProvider, BatchProvider batchProvider) {
     final session = sessionProvider.currentSession;
     if (session == null) return const Center(child: Text('No session data'));
 
@@ -578,13 +587,13 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
         
         // Submitted Items List
         Expanded(
-          child: _buildItemsList(sessionProvider, true),
+          child: _buildItemsList(sessionProvider, true, batchProvider),
         ),
       ],
     );
   }
 
-  Widget _buildItemsList(SessionProvider sessionProvider, bool showSubmitted) {
+  Widget _buildItemsList(SessionProvider sessionProvider, bool showSubmitted, [BatchProvider? batchProvider]) {
     final session = sessionProvider.currentSession;
     if (session == null) return const Center(child: Text('No session data'));
 
@@ -601,7 +610,9 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
     if (showSubmitted) {
       // Show individual batch submissions from selected rack
       // Each submission will appear as a separate entry
-      final batchProvider = Provider.of<BatchProvider>(context, listen: false);
+      if (batchProvider == null) {
+        return const Center(child: Text('Batch provider not available'));
+      }
       final submittedBatches = batchProvider.getSubmittedBatches();
       
       // Filter submitted batches by selected rack and add submission details
