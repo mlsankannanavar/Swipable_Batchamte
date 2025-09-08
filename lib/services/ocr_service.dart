@@ -197,7 +197,7 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
   // Capture and process image for text extraction with auto-matching
   Future<Map<String, dynamic>?> captureAndExtractTextWithMatching({
     required List<dynamic> availableBatches,
-    double similarityThreshold = 0.85, // Increased for hospital safety
+    double similarityThreshold = 0.70, // Increased for hospital safety
   }) async {
     // Check if camera is ready, if not try to initialize
     if (!isCameraReady) {
