@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:provider/provider.dart';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import '../providers/logging_provider.dart';
@@ -75,8 +76,7 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
       _ocrService = OcrService.instance;
       loggingProvider.logApp('Initializing OCR service');
       
-      // Force reinitialize to ensure camera is fresh
-      final initialized = await _ocrService.reinitialize();
+      final initialized = await _ocrService.initialize();
       if (mounted) {
         setState(() {
           _isCameraInitialized = initialized;
@@ -117,44 +117,6 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
       }
     } catch (e) {
       loggingProvider.logError('OCR service re-initialization failed: $e');
-      if (mounted) {
-        setState(() {
-          _isCameraInitialized = false;
-        });
-      }
-    }
-  }
-
-  /// Refresh camera to prevent freeze issues
-  void _refreshCamera() async {
-    if (!mounted) return;
-    
-    final loggingProvider = Provider.of<LoggingProvider>(context, listen: false);
-    
-    try {
-      loggingProvider.logApp('Refreshing camera to prevent freeze');
-      
-      // Set loading state
-      setState(() {
-        _isCameraInitialized = false;
-      });
-      
-      // Force reinitialize the camera
-      final initialized = await _ocrService.reinitialize();
-      
-      if (mounted) {
-        setState(() {
-          _isCameraInitialized = initialized;
-        });
-      }
-      
-      if (initialized == true) {
-        loggingProvider.logSuccess('Camera refreshed successfully');
-      } else {
-        loggingProvider.logError('Camera refresh failed');
-      }
-    } catch (e) {
-      loggingProvider.logError('Camera refresh error: $e');
       if (mounted) {
         setState(() {
           _isCameraInitialized = false;
@@ -212,12 +174,14 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
         String batchNumber;
         String itemName;
         String expiryDate;
+        int quantity = 0; // Default quantity
         
         if (batch is Map<String, dynamic>) {
           // Handle Map format
           batchNumber = (batch['batchNumber'] ?? batch['batch_number'] ?? batch['batchId'] ?? batch['batch_id'] ?? '').toString();
           itemName = (batch['itemName'] ?? batch['item_name'] ?? batch['productName'] ?? batch['product_name'] ?? '').toString();
           expiryDate = (batch['expiryDate'] ?? batch['expiry_date'] ?? '').toString();
+          quantity = (batch['quantity'] ?? 0) as int;
           
           // Store the original batch data for submission
           batchDataMap[batchNumber] = batch;
@@ -234,30 +198,8 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
             'itemName': itemName,
             'productName': batch?.productName,
             'expiryDate': expiryDate,
+            'quantity': batch?.quantity ?? 0,
           };
-        }
-        
-        // Use remaining quantity from selected item for partial submissions
-        int remainingQuantity = 0;
-        if (widget.selectedItem != null) {
-          remainingQuantity = widget.selectedItem!.remainingQuantity;
-          
-          // Log when using remaining quantity for partial submissions
-          if (widget.selectedItem!.submittedQuantity > 0) {
-            loggingProvider.logApp('Using remaining quantity for partial submission',
-                data: {
-                  'itemName': widget.selectedItem!.itemName,
-                  'originalQuantity': widget.selectedItem!.quantity,
-                  'submittedQuantity': widget.selectedItem!.submittedQuantity,
-                  'remainingQuantity': remainingQuantity,
-                });
-          }
-        }
-        // Fallback to batch quantity if no selected item (shouldn't happen in normal flow)
-        if (remainingQuantity <= 0) {
-          remainingQuantity = (batch is Map<String, dynamic>) 
-              ? (batch['quantity'] ?? 1) as int 
-              : (batch?.quantity ?? 1);
         }
         
         batchMatches.add(BatchMatch(
@@ -265,7 +207,7 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
           itemName: itemName,
           expiryDate: expiryDate,
           confidence: (result['confidence'] ?? 0.0).toDouble(),
-          requestedQuantity: remainingQuantity, // Use the remaining quantity for partial submissions
+          requestedQuantity: quantity, // Use the item's quantity
           rank: i + 1,
           itemCode: result['itemCode'],
           purchaseOrderNumber: result['purchaseOrderNumber'],
@@ -544,14 +486,9 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
         
         await batchProvider.addSubmittedBatchDetail(submissionDetail);
         
-        // Update session provider with partial submission using the current selected item
+        // Update session provider with partial submission
         try {
-          if (widget.selectedItem != null) {
-            await sessionProvider.submitItemPartially(widget.selectedItem!.itemName, quantity);
-            loggingProvider.logSuccess('Item quantity updated: ${widget.selectedItem!.itemName} - submitted $quantity');
-          } else {
-            loggingProvider.logError('Cannot update item quantity - no selected item available');
-          }
+          await sessionProvider.submitItemPartially(widget.selectedItem?.itemName ?? '', quantity);
         } catch (e) {
           loggingProvider.logError('Failed to update session with partial submission: $e');
           // Continue with the submission process even if session update fails
@@ -824,12 +761,6 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
         },
       ),
       actions: [
-        // Add refresh camera button to prevent freeze issues
-        IconButton(
-          onPressed: () => _refreshCamera(),
-          icon: const Icon(Icons.refresh_outlined),
-          tooltip: 'Refresh Camera',
-        ),
         if (_isCameraInitialized) ...[
           IconButton(
             onPressed: _toggleFlash,
@@ -1078,18 +1009,17 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
   Widget _buildCapturedImageView() {
     return Column(
       children: [
-        // White background instead of captured image to avoid showing camera/image background
+        // Captured image
         Expanded(
           flex: 3,
           child: Container(
             width: double.infinity,
-            color: Colors.white,
-            child: const Center(
-              child: Icon(
-                Icons.check_circle_outline,
-                size: 80,
-                color: Colors.grey,
-              ),
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey),
+            ),
+            child: Image.file(
+              File(_capturedImagePath!),
+              fit: BoxFit.contain,
             ),
           ),
         ),
@@ -1251,37 +1181,73 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
           topRight: Radius.circular(20),
         ),
       ),
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            GestureDetector(
-              onTap: _captureImage,
-              child: Container(
-                width: 60,
-                height: 60,
-                decoration: BoxDecoration(
-                  color: AppColors.primary,
-                  shape: BoxShape.circle,
-                  border: Border.all(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          // Gallery button
+          Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              IconButton(
+                onPressed: _pickFromGallery,
+                icon: const Icon(Icons.photo_library),
+                iconSize: 32,
+              ),
+              const Text(
+                'Gallery',
+                style: TextStyle(fontSize: 12),
+              ),
+            ],
+          ),
+          
+          // Capture button
+          Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              GestureDetector(
+                onTap: _captureImage,
+                child: Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Colors.white,
+                      width: 3,
+                    ),
+                  ),
+                  child: const Icon(
+                    Icons.camera_alt,
                     color: Colors.white,
-                    width: 3,
+                    size: 24,
                   ),
                 ),
-                child: const Icon(
-                  Icons.camera_alt,
-                  color: Colors.white,
-                  size: 24,
-                ),
               ),
-            ),
-            const SizedBox(height: 4),
-            const Text(
-              'Capture',
-              style: TextStyle(fontSize: 12),
-            ),
-          ],
-        ),
+              const SizedBox(height: 4),
+              const Text(
+                'Capture',
+                style: TextStyle(fontSize: 12),
+              ),
+            ],
+          ),
+          
+          // Settings button
+          Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              IconButton(
+                onPressed: _showOCRSettings,
+                icon: const Icon(Icons.settings),
+                iconSize: 32,
+              ),
+              const Text(
+                'Settings',
+                style: TextStyle(fontSize: 12),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -1441,6 +1407,15 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
     }
   }
 
+  Future<void> _pickFromGallery() async {
+    final loggingProvider = Provider.of<LoggingProvider>(context, listen: false);
+    loggingProvider.logOCR('Picking image from gallery');
+
+    // Implementation for picking from gallery
+    // This would typically use image_picker package
+    loggingProvider.logApp('Gallery picker functionality to be implemented');
+  }
+
   void _resetCapture() {
     final loggingProvider = Provider.of<LoggingProvider>(context, listen: false);
     loggingProvider.logOCR('Resetting capture');
@@ -1473,6 +1448,58 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
       
       // This would typically use the share package
     }
+  }
+
+  void _showOCRSettings() {
+    final loggingProvider = Provider.of<LoggingProvider>(context, listen: false);
+    loggingProvider.logApp('OCR settings opened');
+
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Text(
+                'OCR Settings',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.language),
+              title: const Text('Language'),
+              subtitle: const Text('English'),
+              onTap: () {
+                Navigator.pop(context);
+                // Language selection implementation
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.tune),
+              title: const Text('Recognition Mode'),
+              subtitle: const Text('Balanced'),
+              onTap: () {
+                Navigator.pop(context);
+                // Recognition mode selection implementation
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.info),
+              title: const Text('Tips'),
+              onTap: () {
+                Navigator.pop(context);
+                _showOCRTips();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _showNoMatchesFoundDialog(String extractedText) {
@@ -1545,6 +1572,38 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
               foregroundColor: Colors.white,
             ),
             child: const Text('Retake'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showOCRTips() {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black, // Completely opaque background to hide camera
+      builder: (context) => AlertDialog(
+        title: const Text('OCR Tips'),
+        content: const SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('For better text recognition:'),
+              SizedBox(height: 8),
+              Text('• Ensure good lighting'),
+              Text('• Hold the device steady'),
+              Text('• Position text clearly in frame'),
+              Text('• Avoid shadows and reflections'),
+              Text('• Use high contrast backgrounds'),
+              Text('• Clean the camera lens'),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Got it'),
           ),
         ],
       ),

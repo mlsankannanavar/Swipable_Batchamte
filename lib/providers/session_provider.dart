@@ -22,10 +22,6 @@ class SessionProvider extends ChangeNotifier {
   DateTime? _lastLoadTime;
   Duration? _lastLoadDuration;
   bool _isInitialized = false;
-  
-  // Local partial submission tracking
-  // Map of sessionId -> rackName -> itemName -> submittedQuantity
-  Map<String, Map<String, Map<String, int>>> _partialSubmissions = {};
 
   // Getters
   SessionDetailsModel? get currentSession => _currentSession;
@@ -71,9 +67,6 @@ class SessionProvider extends ChangeNotifier {
       // Initialize Hive box for session storage
       _sessionBox = await Hive.openBox<String>(Constants.sessionBoxKey);
       
-      // Load partial submissions from storage
-      await _loadPartialSubmissions();
-      
       // Load cached session if available
       await _loadCachedSession();
       
@@ -108,10 +101,6 @@ class SessionProvider extends ChangeNotifier {
 
       if (response.success && response.sessionDetails != null) {
         _currentSession = response.sessionDetails;
-        
-        // Apply local partial submissions to freshly loaded data
-        _applyPartialSubmissions();
-        
         _lastLoadTime = DateTime.now();
         _lastLoadDuration = stopwatch.elapsed;
 
@@ -252,22 +241,8 @@ class SessionProvider extends ChangeNotifier {
     }
 
     try {
-      final sessionId = _currentSession!.sessionId;
-      
-      // Update local partial submission tracking
-      if (!_partialSubmissions.containsKey(sessionId)) {
-        _partialSubmissions[sessionId] = {};
-      }
-      if (!_partialSubmissions[sessionId]!.containsKey(_selectedRackName!)) {
-        _partialSubmissions[sessionId]![_selectedRackName!] = {};
-      }
-      
-      // Add to existing partial submission (accumulate)
-      final existingQuantity = _partialSubmissions[sessionId]![_selectedRackName!]![itemName] ?? 0;
-      _partialSubmissions[sessionId]![_selectedRackName!]![itemName] = existingQuantity + submittedQuantity;
-      
-      // Apply partial submissions to current session
-      _applyPartialSubmissions();
+      // Update the session model with partial submission
+      _currentSession = _currentSession!.submitItemPartiallyInRack(_selectedRackName!, itemName, submittedQuantity);
       
       // Save updated session to local storage
       await _saveSessionToLocal();
@@ -277,9 +252,8 @@ class SessionProvider extends ChangeNotifier {
           data: {
             'itemName': itemName,
             'submittedQuantity': submittedQuantity,
-            'totalSubmitted': _partialSubmissions[sessionId]![_selectedRackName!]![itemName],
             'rackName': _selectedRackName,
-            'sessionId': sessionId,
+            'sessionId': _currentSession!.sessionId,
           });
       
       notifyListeners();
@@ -288,105 +262,6 @@ class SessionProvider extends ChangeNotifier {
           error: e,
           stackTrace: stackTrace);
       rethrow;
-    }
-  }
-  
-  // Apply local partial submissions to current session
-  void _applyPartialSubmissions() {
-    if (_currentSession == null) return;
-    
-    final sessionId = _currentSession!.sessionId;
-    if (!_partialSubmissions.containsKey(sessionId)) return;
-    
-    final sessionPartialSubmissions = _partialSubmissions[sessionId]!;
-    final itemsToRemove = <String, List<String>>{}; // rack -> list of items to remove
-    
-    // Create a new session with partial submissions applied
-    final updatedRacks = _currentSession!.racks.map((rack) {
-      if (sessionPartialSubmissions.containsKey(rack.rackName)) {
-        final rackPartialSubmissions = sessionPartialSubmissions[rack.rackName]!;
-        
-        final updatedItems = rack.items.map((item) {
-          if (rackPartialSubmissions.containsKey(item.itemName)) {
-            final totalSubmitted = rackPartialSubmissions[item.itemName]!;
-            final isFullySubmitted = totalSubmitted >= item.quantity;
-            
-            // Mark items for removal if fully submitted
-            if (isFullySubmitted) {
-              itemsToRemove.putIfAbsent(rack.rackName, () => []).add(item.itemName);
-            }
-            
-            return item.copyWith(
-              submittedQuantity: totalSubmitted,
-              isSubmitted: isFullySubmitted,
-            );
-          }
-          return item;
-        }).toList();
-        
-        return rack.copyWith(items: updatedItems);
-      }
-      return rack;
-    }).toList();
-    
-    _currentSession = _currentSession!.copyWith(racks: updatedRacks);
-    
-    // Clean up fully submitted items from partial submissions
-    for (final rackName in itemsToRemove.keys) {
-      for (final itemName in itemsToRemove[rackName]!) {
-        _partialSubmissions[sessionId]?[rackName]?.remove(itemName);
-      }
-      if (_partialSubmissions[sessionId]?[rackName]?.isEmpty == true) {
-        _partialSubmissions[sessionId]?.remove(rackName);
-      }
-    }
-    if (_partialSubmissions[sessionId]?.isEmpty == true) {
-      _partialSubmissions.remove(sessionId);
-    }
-  }
-  
-  // Get partial submission quantity for an item
-  int getPartialSubmissionQuantity(String itemName) {
-    if (_currentSession == null || _selectedRackName == null) return 0;
-    
-    final sessionId = _currentSession!.sessionId;
-    return _partialSubmissions[sessionId]?[_selectedRackName!]?[itemName] ?? 0;
-  }
-  
-  // Clear partial submission for an item (when fully submitted)
-  Future<void> clearPartialSubmission(String itemName) async {
-    if (_currentSession == null || _selectedRackName == null) return;
-    
-    final sessionId = _currentSession!.sessionId;
-    _partialSubmissions[sessionId]?[_selectedRackName!]?.remove(itemName);
-    
-    // Clean up empty maps
-    if (_partialSubmissions[sessionId]?[_selectedRackName!]?.isEmpty == true) {
-      _partialSubmissions[sessionId]?.remove(_selectedRackName!);
-    }
-    if (_partialSubmissions[sessionId]?.isEmpty == true) {
-      _partialSubmissions.remove(sessionId);
-    }
-    
-    await _savePartialSubmissions();
-    _logger.logApp('Partial submission cleared for item: $itemName');
-  }
-
-  // Clear all partial submissions (useful when starting fresh)
-  Future<void> clearAllPartialSubmissions() async {
-    try {
-      _partialSubmissions.clear();
-      
-      // Remove from storage as well
-      if (_sessionBox != null) {
-        await _sessionBox!.delete('partial_submissions');
-        _logger.logApp('All partial submissions cleared from storage');
-      }
-      
-      _logger.logApp('All partial submission data cleared completely');
-      notifyListeners();
-    } catch (e, stackTrace) {
-      _logger.logError('Error clearing partial submissions', error: e, stackTrace: stackTrace);
     }
   }
 
@@ -412,16 +287,13 @@ class SessionProvider extends ChangeNotifier {
       _setLoadingState(SessionLoadingState.idle);
       _errorMessage = null;
       
-      // Clear partial submissions data (both in-memory and stored)
-      _partialSubmissions.clear();
-      
       // Clear cached session data from storage
       if (_sessionBox != null) {
         await _sessionBox!.clear();
         _logger.logApp('Cleared cached session data from storage');
       }
       
-      _logger.logApp('Session and all partial submission data cleared completely');
+      _logger.logApp('Session cleared completely');
       notifyListeners();
     } catch (e, stackTrace) {
       _logger.logError('Error clearing session', error: e, stackTrace: stackTrace);
@@ -460,9 +332,6 @@ class SessionProvider extends ChangeNotifier {
           sessionMap['sessionId'] ?? 'unknown'
         );
         
-        // Apply partial submissions to cached data
-        _applyPartialSubmissions();
-        
         // Restore rack selection
         final selectedRack = _sessionBox!.get('selected_rack');
         _selectedRackName = selectedRack;
@@ -490,56 +359,10 @@ class SessionProvider extends ChangeNotifier {
         await _sessionBox!.put('selected_rack', _selectedRackName!);
       }
       
-      // Also save partial submissions
-      await _savePartialSubmissions();
-      
       _logger.logApp('Session saved to local storage');
     } catch (e, stackTrace) {
       _logger.logError('Failed to save session to local storage',
           error: e, stackTrace: stackTrace);
-    }
-  }
-  
-  // Save partial submissions to local storage
-  Future<void> _savePartialSubmissions() async {
-    if (_sessionBox != null) {
-      try {
-        await _sessionBox!.put('partial_submissions', jsonEncode(_partialSubmissions));
-        _logger.logApp('Partial submissions saved to local storage');
-      } catch (e, stackTrace) {
-        _logger.logError('Failed to save partial submissions to local storage',
-            error: e, stackTrace: stackTrace);
-      }
-    }
-  }
-  
-  // Load partial submissions from local storage
-  Future<void> _loadPartialSubmissions() async {
-    if (_sessionBox != null) {
-      try {
-        final partialSubmissionsStr = _sessionBox!.get('partial_submissions');
-        if (partialSubmissionsStr != null) {
-          final decoded = jsonDecode(partialSubmissionsStr) as Map<String, dynamic>;
-          _partialSubmissions = decoded.map((sessionId, sessionData) {
-            final sessionMap = sessionData as Map<String, dynamic>;
-            return MapEntry(
-              sessionId,
-              sessionMap.map((rackName, rackData) {
-                final rackMap = rackData as Map<String, dynamic>;
-                return MapEntry(
-                  rackName,
-                  rackMap.map((itemName, quantity) => MapEntry(itemName, quantity as int)),
-                );
-              }),
-            );
-          });
-          _logger.logApp('Partial submissions loaded from local storage');
-        }
-      } catch (e, stackTrace) {
-        _logger.logError('Failed to load partial submissions from local storage',
-            error: e, stackTrace: stackTrace);
-        _partialSubmissions = {}; // Reset on error
-      }
     }
   }
 

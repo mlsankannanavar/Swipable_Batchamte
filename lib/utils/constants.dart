@@ -40,7 +40,7 @@ class Constants {
   // OCR Configuration
   static const String ocrTitle = 'Scan Batch Information';
   static const String ocrSubtitle = 'Capture clear image of batch details';
-  static const double ocrConfidenceThreshold = 0.7;
+  static const double ocrConfidenceThreshold = 0.75; // Updated for batch number only matching
   
   // Network Status
   static const Duration connectionCheckInterval = Duration(seconds: 5);
@@ -87,7 +87,7 @@ class Constants {
   // Success Messages
   static const String qrScanSuccessMessage = 'QR code scanned successfully';
   static const String batchDataLoadedMessage = 'Batch data loaded successfully';
-  static const String ocrSuccessMessage = 'Text extracted successfully';
+  static const String ocrSuccessMessage = 'Batch number extracted successfully';
   static const String apiSuccessMessage = 'API request completed successfully';
   
   // Permissions

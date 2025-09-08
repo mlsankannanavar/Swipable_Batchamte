@@ -118,18 +118,9 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
 
   @override
   Widget build(BuildContext context) {
-    return Consumer4<AppStateProvider, LoggingProvider, SessionProvider, BatchProvider>(
-      builder: (context, appStateProvider, loggingProvider, sessionProvider, batchProvider, child) {
+    return Consumer3<AppStateProvider, LoggingProvider, SessionProvider>(
+      builder: (context, appStateProvider, loggingProvider, sessionProvider, child) {
         final bool hasSession = sessionProvider.currentSession != null;
-        
-        // Sync session between providers when session is loaded
-        if (hasSession && sessionProvider.currentSessionId != null) {
-          WidgetsBinding.instance.addPostFrameCallback((_) async {
-            if (batchProvider.currentSessionId != sessionProvider.currentSessionId) {
-              await batchProvider.loadBatchesForSession(sessionProvider.currentSessionId!);
-            }
-          });
-        }
         
         // Initialize tab controller when session is first loaded
         if (hasSession && _tabController == null) {
@@ -143,7 +134,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
         return Scaffold(
           backgroundColor: AppColors.primary,
           appBar: AppBar(
-            backgroundColor: Theme.of(context).colorScheme.surface,
+            backgroundColor: Colors.white,
             title: Row(
               children: [
                 // App logo/icon on the left
@@ -178,12 +169,12 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
               ? PreferredSize(
                   preferredSize: const Size.fromHeight(48.0),
                   child: Container(
-                    color: Theme.of(context).colorScheme.surface,
+                    color: Colors.white,
                     child: TabBar(
                       controller: _getTabController(),
                       indicatorColor: AppColors.primary,
                       labelColor: AppColors.primary,
-                      unselectedLabelColor: Theme.of(context).colorScheme.onSurfaceVariant,
+                      unselectedLabelColor: Colors.grey,
                       tabs: const [
                         Tab(text: 'Available Items'),
                         Tab(text: 'Submitted Items'),
@@ -247,7 +238,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
                 controller: _getTabController(),
                 children: [
                   _buildAvailableItemsScreen(sessionProvider),
-                  _buildSubmittedItemsScreen(sessionProvider, batchProvider),
+                  _buildSubmittedItemsScreen(sessionProvider),
                 ],
               )
             : _buildWelcomeScreen(sessionProvider),
@@ -486,7 +477,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
     );
   }
 
-  Widget _buildSubmittedItemsScreen(SessionProvider sessionProvider, BatchProvider batchProvider) {
+  Widget _buildSubmittedItemsScreen(SessionProvider sessionProvider) {
     final session = sessionProvider.currentSession;
     if (session == null) return const Center(child: Text('No session data'));
 
@@ -587,13 +578,13 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
         
         // Submitted Items List
         Expanded(
-          child: _buildItemsList(sessionProvider, true, batchProvider),
+          child: _buildItemsList(sessionProvider, true),
         ),
       ],
     );
   }
 
-  Widget _buildItemsList(SessionProvider sessionProvider, bool showSubmitted, [BatchProvider? batchProvider]) {
+  Widget _buildItemsList(SessionProvider sessionProvider, bool showSubmitted) {
     final session = sessionProvider.currentSession;
     if (session == null) return const Center(child: Text('No session data'));
 
@@ -608,46 +599,41 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
 
     List<dynamic> itemsToShow;
     if (showSubmitted) {
-      // Show individual batch submissions from selected rack
-      // Each submission will appear as a separate entry
-      if (batchProvider == null) {
-        return const Center(child: Text('Batch provider not available'));
-      }
+      // Show submitted items from selected rack only
+      final batchProvider = Provider.of<BatchProvider>(context, listen: false);
       final submittedBatches = batchProvider.getSubmittedBatches();
       
-      // Filter submitted batches by selected rack and add submission details
+      // Filter submitted batches by selected rack
       itemsToShow = submittedBatches.where((batch) {
         // Check if the submitted batch belongs to the selected rack
         final batchRackName = batch['submissionDetail']?['rackName'] ?? batch['rackName'];
         return batchRackName == selectedRack.rackName;
-      }).map((batch) {
-        // Convert each batch submission to display format
-        final submissionDetail = batch['submissionDetail'];
-        return {
-          'itemName': batch['itemName'] ?? submissionDetail?['itemName'] ?? 'Unknown Item',
-          'quantity': batch['quantity'] ?? 0,
-          'batchNumber': batch['batchNumber'] ?? 'Unknown Batch',
-          'locator': submissionDetail?['locator'] ?? batch['locator'] ?? '',
-          'rackName': submissionDetail?['rackName'] ?? batch['rackName'] ?? '',
-          'submissionTime': batch['submissionTime'] ?? DateTime.now().millisecondsSinceEpoch,
-          'confidence': batch['confidence'] ?? 0.0,
-          'isIndividualSubmission': true,
-          'submissionDetail': submissionDetail,
-        };
       }).toList();
       
-      // Sort by submission time (most recent first)
+      // Sort submitted items by locator position
       itemsToShow.sort((a, b) {
-        final timeA = a['submissionTime'] as int;
-        final timeB = b['submissionTime'] as int;
-        return timeB.compareTo(timeA); // Descending order (newest first)
+        final locatorA = a['submissionDetail']?['locator'] ?? a['locator'] ?? '';
+        final locatorB = b['submissionDetail']?['locator'] ?? b['locator'] ?? '';
+        return _compareLocators(locatorA, locatorB);
       });
     } else {
-      // Show available items from selected rack, including partially submitted items
+      // Show available items from selected rack, excluding submitted items
+      final batchProvider = Provider.of<BatchProvider>(context, listen: false);
+      final submittedBatches = batchProvider.getSubmittedBatches();
+      
+      // Create a set of submitted batch numbers for quick lookup
+      final submittedBatchNumbers = submittedBatches
+          .map((batch) => batch['batchNumber'] as String?)
+          .where((batchNumber) => batchNumber != null)
+          .map((batchNumber) => batchNumber!)
+          .toSet();
+          
+      // Filter available items, excluding those with submitted batches
       itemsToShow = selectedRack.items.where((item) {
-        // Show item if it has remaining quantity (not fully submitted)
-        final remainingQty = item.remainingQuantity;
-        return remainingQty > 0;
+        // Check if any of the item's batches have been submitted
+        final itemBatches = item.batches;
+        return !itemBatches.any((batch) => 
+            submittedBatchNumbers.contains(batch.batchNumber));
       }).toList();
       
       // Sort available items by locator position
@@ -700,26 +686,12 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
     String? locator;
 
     if (isSubmitted) {
-      // Handle individual batch submissions
+      // Handle submitted batch data
       itemName = item['itemName'] ?? 'Unknown Item';
       final submittedQty = item['quantity']?.toString() ?? '0';
-      final batchNumber = item['batchNumber'] ?? 'Unknown Batch';
-      final confidence = item['confidence'] ?? 0.0;
-      final isIndividualSubmission = item['isIndividualSubmission'] ?? false;
-      
-      if (isIndividualSubmission) {
-        // Show individual submission details with batch number
-        quantityText = 'Submitted: $submittedQty\nBatch: $batchNumber';
-        if (confidence > 0) {
-          quantityText += '\nConfidence: ${confidence.toStringAsFixed(0)}%';
-        }
-      } else {
-        // Fallback for older format
-        quantityText = 'Submitted: $submittedQty';
-      }
-      
-      selectedBatch = batchNumber;
-      locator = item['locator'];
+      quantityText = 'Submitted: $submittedQty';
+      selectedBatch = item['batchNumber'];
+      locator = item['submissionDetail']?['locator'] ?? item['locator'];
     } else {
       // Handle regular rack item data - show requested and remaining
       itemName = item.itemName ?? 'Unknown Item';
@@ -862,21 +834,9 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
                               fontWeight: FontWeight.w600,
                               color: Colors.grey.shade700,
                             ),
-                            maxLines: 3, // Allow for 3 lines to show batch and confidence info
+                            maxLines: 2, // Allow for 2 lines to show requested and remaining
                             overflow: TextOverflow.ellipsis,
                           ),
-                          // Show submission timestamp for individual submissions
-                          if (isSubmitted && item['isIndividualSubmission'] == true) ...[
-                            const SizedBox(height: 4),
-                            Text(
-                              _formatSubmissionTime(item['submissionTime']),
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey.shade500,
-                                fontStyle: FontStyle.italic,
-                              ),
-                            ),
-                          ],
                           // Batch info for submitted items only
                           if (isSubmitted && selectedBatch != null) ...[
                             const SizedBox(height: 8),
@@ -1042,34 +1002,5 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
     
     // Finally compare the rest
     return restA.compareTo(restB);
-  }
-
-  // Helper method to format submission timestamp
-  String _formatSubmissionTime(dynamic submissionTime) {
-    try {
-      DateTime dateTime;
-      if (submissionTime is int) {
-        dateTime = DateTime.fromMillisecondsSinceEpoch(submissionTime);
-      } else if (submissionTime is String) {
-        dateTime = DateTime.parse(submissionTime);
-      } else {
-        return 'Recently submitted';
-      }
-      
-      final now = DateTime.now();
-      final difference = now.difference(dateTime);
-      
-      if (difference.inMinutes < 1) {
-        return 'Just now';
-      } else if (difference.inMinutes < 60) {
-        return '${difference.inMinutes} min ago';
-      } else if (difference.inHours < 24) {
-        return '${difference.inHours}h ago';
-      } else {
-        return '${dateTime.day}/${dateTime.month} ${dateTime.hour}:${dateTime.minute.toString().padLeft(2, '0')}';
-      }
-    } catch (e) {
-      return 'Recently submitted';
-    }
   }
 }

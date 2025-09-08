@@ -1,7 +1,7 @@
 # Copilot Instructions for BatchMate Mobile App
 
 ## Project Overview
-BatchMate is a Flutter mobile app for pharmaceutical batch scanning, OCR, fuzzy batch matching, expiry validation, and API submission. The app is architected for reliability, real-time updates, and robust logging.
+BatchMate is a Flutter mobile app for pharmaceutical batch scanning, OCR, fuzzy batch matching, and API submission. The app is architected for reliability, real-time updates, and robust logging.
 
 ## Architecture & Key Components
 - **lib/main.dart**: App entry, provider setup, Hive initialization.
@@ -13,14 +13,14 @@ BatchMate is a Flutter mobile app for pharmaceutical batch scanning, OCR, fuzzy 
 
 ## Critical Workflows
 - **QR Scan → Session Init**: Scan QR, extract sessionId, call `GET /api/filtered-batches/{sessionId}`, cache batches locally.
-- **OCR & Matching**: Use ML Kit to extract text, run fuzzy batch matching (Levenshtein + sliding window), validate expiry using generated date formats.
+- **OCR & Matching**: Use ML Kit to extract text, run fuzzy batch matching (Levenshtein + sliding window) based on batch numbers only.
 - **Result Submission**: POST results to `/api/submit-mobile-batch/{sessionId}` with batch, quantity, confidence, and extracted text.
 - **Logging**: All major actions are logged with category/level via `LoggingService`.
 
 ## Patterns & Conventions
 - **State**: All UI stats (dashboard/log counts) are dynamic via providers—no hardcoded counts.
-- **Local Storage**: Batches are cached with all possible expiry date formats for robust matching.
-- **Matching**: Use similarity threshold (≥75%) and expiry validation for match decisions. See `findBestBatchMatch` logic.
+- **Local Storage**: Batches are cached for robust matching.
+- **Matching**: Use similarity threshold (≥75%) for batch number matching decisions. See `findBestBatchMatch` logic.
 - **Error Handling**: All API/OCR/network errors are logged and surfaced in the UI.
 - **UI Flows**: Three main match scenarios—Exact Match, Multiple Matches, No Match—drive user prompts and actions.
 
@@ -38,12 +38,12 @@ BatchMate is a Flutter mobile app for pharmaceutical batch scanning, OCR, fuzzy 
 ## Examples
 - **QR Scan**: See `QrScannerService.processScannedCode` for sessionId extraction and API call.
 - **Batch Matching**: See matching logic in `lib/services/ocr_service.dart` and `lib/providers/batch_provider.dart`.
-- **Expiry Validation**: Date formats generated and checked for robust matching.
+- **Batch Number Matching**: Only batch numbers are matched using fuzzy string similarity algorithms.
 - **Result Submission**: See API POST logic in `lib/services/api_service.dart`.
 
 ## Project-Specific Advice
 - Never hardcode dashboard/log counts—always use provider/state.
-- When adding new batch fields, update expiry date format generation for matching.
+- When adding new batch fields, focus on batch number extraction and matching accuracy.
 - All logging should use `LoggingService` with proper category/level.
 - For new API endpoints, document request/response formats in code comments and README.
 

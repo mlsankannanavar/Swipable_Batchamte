@@ -54,9 +54,9 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
     final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
     
     return DraggableScrollableSheet(
-      initialChildSize: keyboardHeight > 0 ? 0.98 : 0.8, // Expand more when keyboard is open
+      initialChildSize: keyboardHeight > 0 ? 0.95 : 0.8, // Expand when keyboard is open
       minChildSize: 0.5,
-      maxChildSize: 0.98, // Allow more expansion
+      maxChildSize: 0.95,
       builder: (context, scrollController) {
         return Container(
           decoration: BoxDecoration(
@@ -80,7 +80,7 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
                 
                 // Header with current position indicator
                 Container(
-                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12), // Reduced vertical padding
+                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 15),
                   decoration: BoxDecoration(
                     color: Colors.grey[50],
                     borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -91,16 +91,14 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
                       Text(
                         'Match ${_currentIndex + 1} of ${widget.matches.length}',
                         style: TextStyle(
-                          fontSize: 16, // Reduced from 18
+                          fontSize: 18,
                           fontWeight: FontWeight.w600,
                           color: AppColors.textPrimary,
                         ),
                       ),
                       IconButton(
                         onPressed: widget.onClose,
-                        icon: Icon(Icons.close, color: AppColors.textSecondary, size: 24), // Reduced from 28
-                        padding: EdgeInsets.all(4), // More compact
-                        constraints: BoxConstraints(), // Remove default constraints
+                        icon: Icon(Icons.close, color: AppColors.textSecondary, size: 28),
                       ),
                     ],
                   ),
@@ -222,10 +220,10 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
     
     return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(
-        16, // Reduced from 20
-        16, // Reduced from 20
-        16, // Reduced from 20
-        keyboardHeight > 0 ? keyboardHeight * 0.2 + 16 : 16, // More compact padding when keyboard is open
+        20, 
+        20, 
+        20, 
+        keyboardHeight > 0 ? keyboardHeight * 0.3 + 20 : 20, // Extra padding when keyboard is open
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -234,7 +232,7 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
           Row(
             children: [
               Container(
-                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6), // Reduced padding
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 decoration: BoxDecoration(
                   color: _getRankColor(match.rank),
                   borderRadius: BorderRadius.circular(25),
@@ -243,7 +241,7 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
                   'Rank: ${match.rankDisplay}',
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 12, // Reduced from 14
+                    fontSize: 14,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -268,11 +266,11 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
             ],
           ),
           
-          SizedBox(height: 16), // Reduced from 24
+          SizedBox(height: 24),
           
           // Match information card
           Container(
-            padding: EdgeInsets.all(16), // Reduced from 20
+            padding: EdgeInsets.all(20),
             decoration: BoxDecoration(
               color: Colors.grey[50],
               borderRadius: BorderRadius.circular(12),
@@ -308,11 +306,11 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
             ),
           ),
           
-          SizedBox(height: 16), // Reduced from 24
+          SizedBox(height: 24),
           
           // Quantity input section
           Container(
-            padding: EdgeInsets.all(16), // Reduced from 20
+            padding: EdgeInsets.all(20),
             decoration: BoxDecoration(
               color: Colors.blue[50],
               borderRadius: BorderRadius.circular(12),
@@ -324,19 +322,19 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
                 Text(
                   'Enter Quantity to Submit:',
                   style: TextStyle(
-                    fontSize: 14, // Reduced from 16
+                    fontSize: 16,
                     fontWeight: FontWeight.w600,
                     color: AppColors.textPrimary,
                   ),
                 ),
-                SizedBox(height: 8), // Reduced from 12
+                SizedBox(height: 12),
                 TextField(
                   controller: quantityController,
                   focusNode: _quantityFocusNodes[index],
                   keyboardType: TextInputType.number,
                   textInputAction: TextInputAction.done,
                   style: TextStyle(
-                    fontSize: 16, // Reduced from 18
+                    fontSize: 18,
                     fontWeight: FontWeight.w600,
                   ),
                   inputFormatters: [
@@ -383,15 +381,12 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
                     prefixIcon: Icon(
                       Icons.inventory_2_outlined, 
                       color: AppColors.primary,
-                      size: 20, // Reduced icon size
                     ),
                     suffixText: 'units',
                     suffixStyle: TextStyle(
                       color: AppColors.textSecondary,
                       fontWeight: FontWeight.w500,
-                      fontSize: 12, // Smaller suffix text
                     ),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12), // More compact
                   ),
                 ),
               ],
@@ -399,7 +394,7 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
           ),
           
           // Responsive spacing based on keyboard visibility
-          SizedBox(height: keyboardHeight > 0 ? 8 : 16), // Reduced spacing
+          SizedBox(height: keyboardHeight > 0 ? 16 : 24),
           
           // Action buttons
           Row(
@@ -408,18 +403,18 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
                 flex: 2,
                 child: ElevatedButton.icon(
                   onPressed: () => _handleSubmit(match, quantityController),
-                  icon: Icon(Icons.check_circle_outline, color: Colors.white, size: 18), // Smaller icon
+                  icon: Icon(Icons.check_circle_outline, color: Colors.white),
                   label: Text(
                     'Submit',
                     style: TextStyle(
-                      fontSize: 14, // Reduced font size
+                      fontSize: 16,
                       fontWeight: FontWeight.w600,
                       color: Colors.white,
                     ),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
-                    padding: EdgeInsets.symmetric(vertical: 12), // Reduced padding
+                    padding: EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
@@ -431,17 +426,17 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: widget.onRetake,
-                  icon: Icon(Icons.camera_alt_outlined, color: AppColors.primary, size: 18), // Smaller icon
+                  icon: Icon(Icons.camera_alt_outlined, color: AppColors.primary),
                   label: Text(
                     'Retake',
                     style: TextStyle(
-                      fontSize: 14, // Reduced font size
+                      fontSize: 16,
                       fontWeight: FontWeight.w600,
                       color: AppColors.primary,
                     ),
                   ),
                   style: OutlinedButton.styleFrom(
-                    padding: EdgeInsets.symmetric(vertical: 12), // Reduced padding
+                    padding: EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
