@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:camera/camera.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:intl/intl.dart';
 import 'package:image/image.dart' as img;
 
 import '../utils/constants.dart';
@@ -30,10 +31,10 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
   double? _lastConfidence;
   DateTime? _lastProcessTime;
 
-  // Performance caches
+  // Performance caches (simplified - only for batch similarity)
   final Map<String, double> _similarityCache = {};
 
-  // Getters (same as before)
+  // Getters
   CameraController? get cameraController => _cameraController;
   List<CameraDescription>? get cameras => _cameras;
   bool get isInitialized => _isInitialized;
@@ -48,7 +49,7 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
     if (_isInitialized) return true;
 
     try {
-      _logger.logOcr('Initializing optimized OCR service');
+      _logger.logOcr('Initializing simplified OCR service (batch number only matching)');
 
       // Check camera permission first
       final permissionStatus = await _checkCameraPermission();
@@ -150,7 +151,7 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
       }
       
       _isInitialized = true;
-      _logger.logOcr('Optimized OCR service initialized successfully');
+      _logger.logOcr('Simplified OCR service initialized successfully');
       notifyListeners();
       return true;
     } catch (e, stackTrace) {
@@ -176,7 +177,7 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
   
   // Force re-initialization (useful for lifecycle management)
   Future<bool> reinitialize() async {
-    _logger.logOcr('Force re-initializing OCR service');
+    _logger.logOcr('Force re-initializing simplified OCR service');
     
     // Clean up current state
     _isInitialized = false;
@@ -194,10 +195,10 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
     return await initialize();
   }
 
-  // Capture and process image for text extraction with auto-matching
+  // Capture and process image for text extraction with simplified batch matching
   Future<Map<String, dynamic>?> captureAndExtractTextWithMatching({
     required List<dynamic> availableBatches,
-    double similarityThreshold = 0.70, // Increased for hospital safety
+    double similarityThreshold = 0.60, // Lowered to 60% for more lenient matching
   }) async {
     // Check if camera is ready, if not try to initialize
     if (!isCameraReady) {
@@ -225,7 +226,7 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
     final stopwatch = Stopwatch()..start();
 
     try {
-      _logger.logOcr('Capturing image for text extraction and matching');
+      _logger.logOcr('Capturing image for simplified batch matching (batch number only)');
 
       // Capture image
       final XFile imageFile = await _cameraController!.takePicture();
@@ -271,8 +272,8 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
         };
       }
 
-      // Perform optimized batch matching
-      final matches = findBestBatchMatchesOptimized(
+      // Perform simplified batch matching (batch number only)
+      final matches = findBestBatchMatchesSimplified(
         extractedText: extractedText,
         batches: availableBatches,
         similarityThreshold: similarityThreshold,
@@ -281,16 +282,16 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
       // If no matches found, get nearest matches
       List<BatchMatchResult> nearestMatches = [];
       if (matches.isEmpty) {
-        nearestMatches = findNearestBatchMatchesOptimized(
+        nearestMatches = findNearestBatchMatchesSimplified(
           extractedText: extractedText,
           batches: availableBatches,
-          maxResults: 2,
+          maxResults: 3, // Increased to 3 for more options
         );
-        _logger.logOcr('No exact matches found, showing ${nearestMatches.length} nearest matches');
+        _logger.logOcr('No matches found at ${(similarityThreshold * 100).toInt()}% threshold, showing ${nearestMatches.length} nearest matches');
       }
 
       stopwatch.stop();
-      _logger.logPerformance('Optimized OCR text extraction and matching', stopwatch.elapsed);
+      _logger.logPerformance('Simplified OCR batch matching', stopwatch.elapsed);
 
       // Clean up the temporary image files
       try {
@@ -544,7 +545,7 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
       final lotMatch = lotPattern.firstMatch(text);
       result['lotNumber'] = lotMatch?.group(1);
 
-      // Extract expiry date patterns (various formats)
+      // Extract expiry date patterns (various formats) - keeping for backward compatibility
       final expiryPatterns = [
         RegExp(r'EXP[:\s]*(\d{2}/\d{2}/\d{4})', caseSensitive: false),
         RegExp(r'EXPIRY[:\s]*(\d{2}/\d{2}/\d{4})', caseSensitive: false),
@@ -576,20 +577,21 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
     }
   }
 
-  /// OPTIMIZED: Enhanced batch matching with improved performance
-  /// Uses KMP-like approach for efficient string searching
-  /// Returns matches based on batch number similarity only (expiry date matching removed)
-  List<BatchMatchResult> findBestBatchMatchesOptimized({
+  /// SIMPLIFIED: Enhanced batch matching with ONLY batch number matching (no expiry date requirement)
+  /// Uses 60% similarity threshold for more lenient matching
+  /// Returns matches based ONLY on batch number similarity
+  List<BatchMatchResult> findBestBatchMatchesSimplified({
     required String extractedText,
     required List<dynamic> batches,
-    double similarityThreshold = 0.7, // Increased for hospital safety
+    double similarityThreshold = 0.60, // Lowered to 60% for more lenient matching
   }) {
-    final List<BatchMatchResult> allMatches = [];
+    final List<BatchMatchResult> matches = [];
     final normalizedText = extractedText.trim().toUpperCase();
     
-    _logger.logOcr('OPTIMIZED_MATCH_START: Beginning optimized batch matching process (batch number only)');
+    _logger.logOcr('SIMPLIFIED_MATCH_START: Beginning simplified batch matching (batch number only)');
     _logger.logOcr('MATCH_INPUT_TEXT: Extracted text: "$extractedText"');
     _logger.logOcr('MATCH_AVAILABLE_BATCHES: ${batches.length} batches available for matching');
+    _logger.logOcr('SIMILARITY_THRESHOLD: ${(similarityThreshold * 100).toInt()}%');
 
     // Pre-process text for faster searching
     final words = normalizedText.split(RegExp(r'\s+'));
@@ -609,41 +611,32 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
       
       if (batchNumber.isEmpty) continue;
 
-      // Optimized batch number search (no expiry date validation)
-      final batchSimilarity = _findBatchNumberOptimized(batchNumber, normalizedText, words, wordSet);
+      // SIMPLIFIED: Only check batch number similarity
+      final batchSimilarity = _findBatchNumberOptimizedLenient(batchNumber, normalizedText, words, wordSet);
+      
+      _logger.logOcr('BATCH_CHECK: ${batchNumber} similarity: ${(batchSimilarity * 100).toInt()}%');
       
       if (batchSimilarity >= similarityThreshold) {
-        _logger.logOcr('BATCH_MATCH: ${batchNumber} found with ${(batchSimilarity * 100).toInt()}% similarity');
-        
-        allMatches.add(BatchMatchResult(
+        matches.add(BatchMatchResult(
           batch: batch,
           similarity: batchSimilarity,
-          expiryValid: false, // No longer checking expiry dates
+          expiryValid: true, // Always true since we're not checking expiry
         ));
-        _logger.logOcr('MATCH_ADDED: Added ${batchNumber} as match (batch similarity: ${(batchSimilarity * 100).toInt()}%)');
-      } else if (batchSimilarity > 0.60) { // Add reasonable near-matches
-        allMatches.add(BatchMatchResult(
-          batch: batch,
-          similarity: batchSimilarity,
-          expiryValid: false,
-        ));
+        _logger.logOcr('MATCH_FOUND: Added ${batchNumber} as match with ${(batchSimilarity * 100).toInt()}% similarity');
       }
     }
     
-    // Sort all matches by similarity (highest first)
-    allMatches.sort((a, b) => b.similarity.compareTo(a.similarity));
+    // Sort matches by similarity (highest first)
+    matches.sort((a, b) => b.similarity.compareTo(a.similarity));
     
-    // Return top matches for user decision
-    final topMatches = allMatches.take(5).toList();
-    
-    _logger.logOcr('MATCH_RESULTS: Found ${topMatches.length} batch matches (no expiry validation)');
-    return topMatches;
+    _logger.logOcr('MATCH_RESULTS: Found ${matches.length} matches above ${(similarityThreshold * 100).toInt()}% threshold');
+    return matches;
   }
 
-  /// OPTIMIZED: Fast batch number search using word-based approach and caching
+  /// SIMPLIFIED: Fast batch number search with more lenient matching for single character differences
   /// Time complexity: O(n) instead of O(n²)
-  double _findBatchNumberOptimized(String batchNumber, String extractedText, List<String> words, Set<String> wordSet) {
-    _logger.logOcr('OPTIMIZED_BATCH_SEARCH: Looking for "$batchNumber" in text');
+  double _findBatchNumberOptimizedLenient(String batchNumber, String extractedText, List<String> words, Set<String> wordSet) {
+    _logger.logOcr('LENIENT_BATCH_SEARCH: Looking for "$batchNumber" in text');
     
     // Cache key for memoization
     final cacheKey = '$batchNumber|$extractedText';
@@ -655,38 +648,48 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
     
     // Method 1: Direct substring search (fastest)
     if (extractedText.contains(batchNumber)) {
-      _logger.logOcr('OPTIMIZED_BATCH_SEARCH: Exact match found for "$batchNumber"');
+      _logger.logOcr('LENIENT_BATCH_SEARCH: Exact match found for "$batchNumber"');
       _similarityCache[cacheKey] = 1.0;
       return 1.0;
     }
     
-    // Method 2: Word-based fuzzy matching (O(n) instead of O(n²))
+    // Method 2: More lenient word-based fuzzy matching
     for (final word in words) {
-      if ((word.length - batchNumber.length).abs() <= 3) { // Quick length filter
-        final similarity = _optimizedLevenshteinSimilarity(batchNumber, word);
+      // More lenient length filter - allow more variation
+      if ((word.length - batchNumber.length).abs() <= max(2, batchNumber.length ~/ 3)) {
+        final similarity = _optimizedLevenshteinSimilarityLenient(batchNumber, word);
         if (similarity > bestSimilarity) {
           bestSimilarity = similarity;
-          // Early exit if we find a very good match
-          if (similarity >= 0.95) break;
+          // Continue searching even for good matches to find the best one
         }
       }
     }
     
-    // Method 3: Sliding window only for very short batch numbers (length <= 6)
-    if (bestSimilarity < 0.8 && batchNumber.length <= 6) {
+    // Method 3: Sliding window with more lenient matching
+    if (bestSimilarity < 0.75) { // Lower threshold for sliding window
       final batchLength = batchNumber.length;
-      for (int i = 0; i <= extractedText.length - batchLength; i += 2) { // Skip every other position for speed
-        final segment = extractedText.substring(i, i + batchLength);
-        final similarity = _optimizedLevenshteinSimilarity(batchNumber, segment);
-        if (similarity > bestSimilarity) {
-          bestSimilarity = similarity;
-          // Early exit if we find a very good match
-          if (similarity >= 0.95) break;
+      
+      // Try different window sizes around the batch length
+      for (int windowSize = max(1, batchLength - 2); windowSize <= batchLength + 2; windowSize++) {
+        for (int i = 0; i <= extractedText.length - windowSize; i++) {
+          final segment = extractedText.substring(i, i + windowSize);
+          final similarity = _optimizedLevenshteinSimilarityLenient(batchNumber, segment);
+          if (similarity > bestSimilarity) {
+            bestSimilarity = similarity;
+          }
         }
       }
     }
     
-    _logger.logOcr('OPTIMIZED_BATCH_SEARCH: Best similarity for "$batchNumber": ${(bestSimilarity * 100).toInt()}%');
+    // Method 4: Character-by-character partial matching for very short batches
+    if (bestSimilarity < 0.60 && batchNumber.length <= 8) {
+      final partialSimilarity = _calculatePartialCharacterMatch(batchNumber, extractedText);
+      if (partialSimilarity > bestSimilarity) {
+        bestSimilarity = partialSimilarity;
+      }
+    }
+    
+    _logger.logOcr('LENIENT_BATCH_SEARCH: Best similarity for "$batchNumber": ${(bestSimilarity * 100).toInt()}%');
     
     // Cache the result
     _similarityCache[cacheKey] = bestSimilarity;
@@ -694,19 +697,35 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
     return bestSimilarity;
   }
 
-  /// Find nearest batch matches for fallback when no exact matches found
-  /// OPTIMIZED version with better performance
-  List<BatchMatchResult> findNearestBatchMatchesOptimized({
+  /// Calculate partial character match for very lenient matching
+  double _calculatePartialCharacterMatch(String batchNumber, String extractedText) {
+    if (batchNumber.isEmpty || extractedText.isEmpty) return 0.0;
+    
+    int matchingChars = 0;
+    final batchChars = batchNumber.split('');
+    
+    for (final char in batchChars) {
+      if (extractedText.contains(char)) {
+        matchingChars++;
+      }
+    }
+    
+    return matchingChars / batchNumber.length;
+  }
+
+  /// Find nearest batch matches for fallback when no matches found at threshold
+  /// SIMPLIFIED version with more lenient criteria
+  List<BatchMatchResult> findNearestBatchMatchesSimplified({
     required String extractedText,
     required List<dynamic> batches,
-    int maxResults = 2,
+    int maxResults = 3,
   }) {
     final List<BatchMatchResult> allMatches = [];
     final normalizedText = extractedText.trim().toUpperCase();
     final words = normalizedText.split(RegExp(r'\s+'));
     final wordSet = Set<String>.from(words);
     
-    _logger.logOcr('OPTIMIZED_NEAREST_SEARCH: Finding nearest matches (no exact expiry match required)');
+    _logger.logOcr('SIMPLIFIED_NEAREST_SEARCH: Finding nearest matches with lower threshold');
     
     for (final batch in batches) {
       // Handle both BatchModel objects and Map objects
@@ -714,20 +733,19 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
       if (batch is Map<String, dynamic>) {
         batchNumber = (batch['batchNumber'] ?? batch['batchId'] ?? '').toString().trim().toUpperCase();
       } else {
-        // Assume it's a BatchModel or similar object with properties
         batchNumber = (batch.batchNumber ?? batch.batchId ?? '').toString().trim().toUpperCase();
       }
       
       if (batchNumber.isEmpty) continue;
 
-      final similarity = _findBatchNumberOptimized(batchNumber, normalizedText, words, wordSet);
+      final similarity = _findBatchNumberOptimizedLenient(batchNumber, normalizedText, words, wordSet);
       
-      // Only include reasonable matches
-      if (similarity > 0.5) {
+      // Include matches with even lower threshold for nearest matches
+      if (similarity > 0.3) { // Very lenient threshold
         allMatches.add(BatchMatchResult(
           batch: batch,
           similarity: similarity,
-          expiryValid: false, // Mark as not having exact expiry match
+          expiryValid: false, // Mark as nearest match (not exact)
         ));
       }
     }
@@ -736,27 +754,38 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
     allMatches.sort((a, b) => b.similarity.compareTo(a.similarity));
     final result = allMatches.take(maxResults).toList();
     
-    _logger.logOcr('OPTIMIZED_NEAREST_SEARCH: Returning ${result.length} nearest matches');
+    _logger.logOcr('SIMPLIFIED_NEAREST_SEARCH: Returning ${result.length} nearest matches');
     return result;
   }
 
-  /// OPTIMIZED: Levenshtein similarity with early termination and reduced memory allocation
-  double _optimizedLevenshteinSimilarity(String a, String b) {
+  /// LENIENT: Levenshtein similarity with more forgiving scoring for single character differences
+  double _optimizedLevenshteinSimilarityLenient(String a, String b) {
     if (a == b) return 1.0;
     if (a.isEmpty || b.isEmpty) return 0.0;
     
     final maxLen = max(a.length, b.length);
     final minLen = min(a.length, b.length);
     
-    // Quick filter: if length difference is too big, skip expensive calculation
-    if ((maxLen - minLen) / maxLen > 0.5) return 0.0;
+    // More lenient length filter
+    if ((maxLen - minLen) / maxLen > 0.7) return 0.0;
     
-    final dist = _optimizedLevenshtein(a, b);
-    return 1.0 - (dist / maxLen);
+    final dist = _optimizedLevenshteinLenient(a, b);
+    
+    // More forgiving scoring - single character differences get higher scores
+    double similarity = 1.0 - (dist / maxLen);
+    
+    // Bonus for close matches with single character differences
+    if (dist == 1 && maxLen > 2) {
+      similarity = max(similarity, 0.85); // At least 85% for single char difference
+    } else if (dist == 2 && maxLen > 4) {
+      similarity = max(similarity, 0.75); // At least 75% for two char differences
+    }
+    
+    return similarity;
   }
 
-  /// OPTIMIZED: Levenshtein distance with single array instead of matrix (space optimization)
-  int _optimizedLevenshtein(String s, String t) {
+  /// LENIENT: Levenshtein distance calculation
+  int _optimizedLevenshteinLenient(String s, String t) {
     if (s == t) return 0;
     if (s.isEmpty) return t.length;
     if (t.isEmpty) return s.length;
@@ -873,7 +902,7 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
     }
   }
 
-  // Get OCR status info (enhanced)
+  // Get OCR status info (simplified)
   Map<String, dynamic> getStatusInfo() {
     return {
       'isInitialized': _isInitialized,
@@ -884,10 +913,12 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
       'lastProcessTime': _lastProcessTime?.toIso8601String(),
       'currentCamera': _cameraController?.description.lensDirection.name,
       'cacheSize': _similarityCache.length,
+      'matchingMode': 'simplified_batch_only',
+      'defaultThreshold': '60%',
     };
   }
 
-  // Reset OCR state (enhanced)
+  // Reset OCR state (simplified)
   void reset() {
     _lastExtractedText = null;
     _lastConfidence = null;
@@ -896,7 +927,7 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
     // Clear caches
     _similarityCache.clear();
     
-    _logger.logOcr('Optimized OCR state reset with cache clearing');
+    _logger.logOcr('Simplified OCR state reset');
     notifyListeners();
   }
 
@@ -906,7 +937,7 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
     _logger.logOcr('OCR caches cleared for memory optimization');
   }
 
-  // Dispose resources (enhanced)
+  // Dispose resources (simplified)
   @override
   void dispose() {
     _cameraController?.dispose();
@@ -915,17 +946,17 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
     // Clear caches
     _similarityCache.clear();
     
-    _logger.logOcr('Optimized OCR service disposed with cache cleanup');
+    _logger.logOcr('Simplified OCR service disposed');
     super.dispose();
   }
 
-  /// Generate top 5 batch matches for swipeable cards interface
+  /// Generate top 5 batch matches for swipeable cards interface (SIMPLIFIED)
   List<dynamic> findTop5BatchMatchesForCards({
     required String extractedText,
     required List<dynamic> batches,
     Map<String, dynamic>? sessionDetails,
   }) {
-    _logger.logOcr('TOP5_MATCH_START: Generating top 5 matches for cards interface');
+    _logger.logOcr('TOP5_SIMPLIFIED_MATCH_START: Generating top 5 matches for cards (batch number only)');
     
     final List<dynamic> allMatches = [];
     final normalizedText = extractedText.trim().toUpperCase();
@@ -935,42 +966,29 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
     final purchaseOrderNumber = sessionDetails?['purchaseOrderNumber'] as String?;
     final saleOrderNumber = sessionDetails?['saleOrderNumber'] as String?;
     
-    // Create mapping for item codes to remNumbers
-    final Map<String, int> itemRemNumberMap = {};
-    final Map<String, String> itemCodeMap = {};
-    
-    for (final item in itemsWithRemNumbers) {
-      final itemCode = item['itemCode'] as String;
-      final remNumber = item['remNumber'] as int;
-      itemRemNumberMap[itemCode] = remNumber;
-      itemCodeMap[itemCode] = itemCode;
-    }
-    
-    // Calculate matches for all batches
+    // Calculate matches for all batches (simplified - batch number only)
     for (final batch in batches) {
       // Handle both BatchModel objects and Map objects
       String batchNumber;
       String? itemName;
       
       if (batch is Map<String, dynamic>) {
-        // Handle Map format
         batchNumber = (batch['batchNumber'] ?? batch['batch_number'] ?? batch['batchId'] ?? batch['batch_id'] ?? '').toString().trim().toUpperCase();
         itemName = batch['itemName']?.toString() ?? batch['item_name']?.toString() ?? batch['productName']?.toString() ?? batch['product_name']?.toString();
       } else {
-        // Handle BatchModel object
         batchNumber = (batch.batchNumber ?? batch.batchId ?? '').toString().trim().toUpperCase();
         itemName = batch.itemName ?? batch.productName;
       }
       
       if (batchNumber.isEmpty) continue;
       
-      // Calculate batch number similarity only (expiry date matching removed)
-      final batchSimilarity = _findBatchNumberSimilarityForCards(batchNumber, normalizedText);
+      // Calculate batch number similarity only
+      final batchSimilarity = _findBatchNumberSimilarityForCardsSimplified(batchNumber, normalizedText);
       
-      // Use batch similarity as the final score (no expiry date weighting)
+      // Use batch similarity as the final score (no expiry component)
       final finalScore = batchSimilarity;
       
-      if (finalScore >= 0.75) { // Threshold based on batch number similarity only
+      if (finalScore >= 0.60) { // 60% threshold for cards
         // Find requested quantity from remNumbers using intelligent matching
         int requestedQuantity = 0;
         String? matchedItemCode;
@@ -1008,24 +1026,24 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
     allMatches.sort((a, b) => (b['confidence'] as double).compareTo(a['confidence'] as double));
     final top5 = allMatches.take(5).toList();
     
-    _logger.logOcr('TOP5_MATCH_RESULTS: Generated ${top5.length} top matches');
+    _logger.logOcr('TOP5_SIMPLIFIED_MATCH_RESULTS: Generated ${top5.length} top matches (batch only)');
     return top5;
   }
 
-  /// Calculate batch number similarity for cards
-  double _findBatchNumberSimilarityForCards(String batchNumber, String extractedText) {
+  /// Calculate batch number similarity for cards (simplified)
+  double _findBatchNumberSimilarityForCardsSimplified(String batchNumber, String extractedText) {
     // Direct substring match
     if (extractedText.contains(batchNumber)) {
       return 1.0;
     }
     
-    // Fuzzy matching using edit distance
+    // Fuzzy matching using edit distance with lenient scoring
     final words = extractedText.split(RegExp(r'\s+'));
     double bestSimilarity = 0.0;
     
     for (final word in words) {
-      if ((word.length - batchNumber.length).abs() <= 3) {
-        final similarity = _calculateLevenshteinSimilarityForCards(batchNumber, word);
+      if ((word.length - batchNumber.length).abs() <= max(2, batchNumber.length ~/ 3)) {
+        final similarity = _optimizedLevenshteinSimilarityLenient(batchNumber, word);
         if (similarity > bestSimilarity) {
           bestSimilarity = similarity;
         }
@@ -1035,7 +1053,7 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
     return bestSimilarity;
   }
 
-  /// Find the best matching item code for a batch
+  /// Find the best matching item code for a batch (same as before)
   String? _findBestItemCodeForBatch({
     required String itemName,
     required String batchNumber,
@@ -1044,63 +1062,21 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
   }) {
     if (itemsWithRemNumbers.isEmpty) return null;
     
-    // Strategy 1: Try to find a pattern-based match
-    // This is where you could implement more sophisticated matching logic
-    // based on your specific business rules
-    
-    // Strategy 2: Round-robin distribution to ensure all remNumbers are used
+    // Strategy: Round-robin distribution to ensure all remNumbers are used
     // This ensures that we distribute the quantities fairly across available items
     final index = allMatches.length % itemsWithRemNumbers.length;
     final selectedItem = itemsWithRemNumbers[index];
     return selectedItem['itemCode'] as String?;
   }
 
-  /// Calculate Levenshtein similarity for cards
-  double _calculateLevenshteinSimilarityForCards(String s1, String s2) {
-    if (s1.isEmpty || s2.isEmpty) return 0.0;
-    
-    final maxLength = max(s1.length, s2.length);
-    final distance = _levenshteinDistanceForCards(s1, s2);
-    
-    return 1.0 - (distance / maxLength);
-  }
-
-  /// Calculate Levenshtein distance for cards
-  int _levenshteinDistanceForCards(String s1, String s2) {
-    final len1 = s1.length;
-    final len2 = s2.length;
-    
-    final matrix = List.generate(len1 + 1, (i) => List.filled(len2 + 1, 0));
-    
-    for (int i = 0; i <= len1; i++) {
-      matrix[i][0] = i;
-    }
-    
-    for (int j = 0; j <= len2; j++) {
-      matrix[0][j] = j;
-    }
-    
-    for (int i = 1; i <= len1; i++) {
-      for (int j = 1; j <= len2; j++) {
-        final cost = s1[i - 1] == s2[j - 1] ? 0 : 1;
-        matrix[i][j] = min(
-          min(matrix[i - 1][j] + 1, matrix[i][j - 1] + 1),
-          matrix[i - 1][j - 1] + cost,
-        );
-      }
-    }
-    
-    return matrix[len1][len2];
-  }
-
-  /// Convert match results to BatchMatch objects
+  /// Convert match results to BatchMatch objects (simplified)
   List<dynamic> convertToBatchMatchObjects(List<dynamic> matchResults) {
     return matchResults.map((result) {
       final batch = result['batch'];
       return {
         'batchNumber': batch.batchNumber ?? batch.batchId ?? '',
         'itemName': batch.itemName ?? batch.productName ?? '',
-        'expiryDate': batch.expiryDate ?? '',
+        'expiryDate': batch.expiryDate ?? '', // Keep for display but not used in matching
         'confidence': result['confidence'] ?? 0.0,
         'requestedQuantity': result['requestedQuantity'] ?? 0,
         'rank': 0, // Will be set when creating BatchMatch objects
@@ -1110,15 +1086,13 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
       };
     }).toList();
   }
-
-  /// Generate expiry date formats for cards
 }
 
-/// Result class for batch matching (same as before)
+/// Result class for batch matching (simplified)
 class BatchMatchResult {
   final dynamic batch;
   final double similarity;
-  final bool expiryValid;
+  final bool expiryValid; // Always true in simplified mode
   
   BatchMatchResult({
     required this.batch, 
