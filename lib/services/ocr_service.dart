@@ -1087,24 +1087,45 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
 
   /// Calculate batch number similarity for cards
   double _findBatchNumberSimilarityForCards(String batchNumber, String extractedText) {
-    // Direct substring match
-    if (extractedText.contains(batchNumber)) {
+    // Clean the extracted text using the same logic as the main matching
+    final cleanedText = _cleanOcrText(extractedText);
+    _logger.logOcr('CARDS_SEARCH: Looking for "$batchNumber" in cleaned text: "$cleanedText" (from "$extractedText")');
+    
+    // Direct substring match on cleaned text
+    if (cleanedText.contains(batchNumber)) {
+      _logger.logOcr('CARDS_SEARCH: Exact match found for "$batchNumber"');
       return 1.0;
     }
     
-    // Fuzzy matching using edit distance
-    final words = extractedText.split(RegExp(r'\s+'));
+    // Use the same enhanced fuzzy matching as the main algorithm
+    final words = cleanedText.split(RegExp(r'\s+'));
     double bestSimilarity = 0.0;
     
+    // Method 1: Word-based matching with enhanced similarity
     for (final word in words) {
       if ((word.length - batchNumber.length).abs() <= 3) {
-        final similarity = _calculateLevenshteinSimilarityForCards(batchNumber, word);
+        final similarity = _optimizedLevenshteinSimilarity(batchNumber, word);
         if (similarity > bestSimilarity) {
           bestSimilarity = similarity;
+          _logger.logOcr('CARDS_SEARCH: Word match "$word" vs "$batchNumber": ${(similarity * 100).toInt()}%');
         }
       }
     }
     
+    // Method 2: Sliding window with enhanced similarity (if no good word match)
+    if (bestSimilarity < 0.9) {
+      final batchLength = batchNumber.length;
+      for (int i = 0; i <= cleanedText.length - batchLength; i++) {
+        final segment = cleanedText.substring(i, i + batchLength);
+        final similarity = _optimizedLevenshteinSimilarity(batchNumber, segment);
+        if (similarity > bestSimilarity) {
+          bestSimilarity = similarity;
+          _logger.logOcr('CARDS_SEARCH: Segment match "$segment" vs "$batchNumber": ${(similarity * 100).toInt()}%');
+        }
+      }
+    }
+    
+    _logger.logOcr('CARDS_SEARCH: Best similarity for "$batchNumber": ${(bestSimilarity * 100).toInt()}%');
     return bestSimilarity;
   }
 
@@ -1126,44 +1147,6 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
     final index = allMatches.length % itemsWithRemNumbers.length;
     final selectedItem = itemsWithRemNumbers[index];
     return selectedItem['itemCode'] as String?;
-  }
-
-  /// Calculate Levenshtein similarity for cards
-  double _calculateLevenshteinSimilarityForCards(String s1, String s2) {
-    if (s1.isEmpty || s2.isEmpty) return 0.0;
-    
-    final maxLength = max(s1.length, s2.length);
-    final distance = _levenshteinDistanceForCards(s1, s2);
-    
-    return 1.0 - (distance / maxLength);
-  }
-
-  /// Calculate Levenshtein distance for cards
-  int _levenshteinDistanceForCards(String s1, String s2) {
-    final len1 = s1.length;
-    final len2 = s2.length;
-    
-    final matrix = List.generate(len1 + 1, (i) => List.filled(len2 + 1, 0));
-    
-    for (int i = 0; i <= len1; i++) {
-      matrix[i][0] = i;
-    }
-    
-    for (int j = 0; j <= len2; j++) {
-      matrix[0][j] = j;
-    }
-    
-    for (int i = 1; i <= len1; i++) {
-      for (int j = 1; j <= len2; j++) {
-        final cost = s1[i - 1] == s2[j - 1] ? 0 : 1;
-        matrix[i][j] = min(
-          min(matrix[i - 1][j] + 1, matrix[i][j - 1] + 1),
-          matrix[i - 1][j - 1] + cost,
-        );
-      }
-    }
-    
-    return matrix[len1][len2];
   }
 
   /// Convert match results to BatchMatch objects
