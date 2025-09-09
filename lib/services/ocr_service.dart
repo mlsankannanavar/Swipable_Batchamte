@@ -5,7 +5,6 @@ import 'package:flutter/foundation.dart';
 import 'package:camera/camera.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:intl/intl.dart';
 import 'package:image/image.dart' as img;
 
 import '../utils/constants.dart';
@@ -274,26 +273,23 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
         };
       }
 
-      // Perform optimized batch matching
+      // Perform optimized batch matching - always returns sorted results
       final matches = findBestBatchMatchesOptimized(
         extractedText: extractedText,
         batches: availableBatches,
         similarityThreshold: similarityThreshold,
       );
 
-      // If no matches found, get nearest matches
-      List<BatchMatchResult> nearestMatches = [];
-      if (matches.isEmpty) {
-        nearestMatches = findNearestBatchMatchesOptimized(
-          extractedText: extractedText,
-          batches: availableBatches,
-          maxResults: 2,
-        );
-        _logger.logOcr('No exact matches found, showing ${nearestMatches.length} nearest matches');
-      }
+      // Always use findNearestBatchMatchesOptimized for comprehensive results
+      final allMatches = matches.isNotEmpty ? matches : findNearestBatchMatchesOptimized(
+        extractedText: extractedText,
+        batches: availableBatches,
+        maxResults: 10,
+      );
 
       stopwatch.stop();
       _logger.logPerformance('Optimized OCR text extraction and matching', stopwatch.elapsed);
+      _logger.logOcr('Returning ${allMatches.length} matches sorted by confidence');
 
       // Clean up the temporary image files
       try {
@@ -307,8 +303,8 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
       return {
         'success': true,
         'extractedText': extractedText,
-        'matches': matches,
-        'nearestMatches': nearestMatches,
+        'matches': allMatches,
+        'nearestMatches': allMatches, // Same as matches since we always return sorted results
         'confidence': _lastConfidence ?? 0.0,
         'imageBytes': croppedImageBytes,
       };
@@ -579,19 +575,18 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
     }
   }
 
-  /// OPTIMIZED: Enhanced batch matching with improved performance
-  /// Uses KMP-like approach for efficient string searching
-  /// Returns matches only if BOTH batch number (85%+ similarity) AND exact expiry date found
+  /// OPTIMIZED: Enhanced batch matching with improved performance  
+  /// Uses batch number matching only (no expiry date matching)
+  /// Returns all matches sorted by similarity - no threshold failures
   List<BatchMatchResult> findBestBatchMatchesOptimized({
     required String extractedText,
     required List<dynamic> batches,
-    double similarityThreshold = 0.85, // Increased for hospital safety
+    double similarityThreshold = 0.50, // Lowered for better sensitivity
   }) {
-    final List<BatchMatchResult> exactMatches = [];
-    final List<BatchMatchResult> nearestMatches = [];
+    final List<BatchMatchResult> allMatches = [];
     final normalizedText = extractedText.trim().toUpperCase();
     
-    _logger.logOcr('OPTIMIZED_MATCH_START: Beginning optimized batch matching process');
+    _logger.logOcr('OPTIMIZED_MATCH_START: Beginning batch number only matching process');
     _logger.logOcr('MATCH_INPUT_TEXT: Extracted text: "$extractedText"');
     _logger.logOcr('MATCH_AVAILABLE_BATCHES: ${batches.length} batches available for matching');
 
@@ -602,80 +597,39 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
     for (final batch in batches) {
       // Handle both BatchModel objects and Map objects
       String batchNumber;
-      String? expiryDate;
       
       if (batch is Map<String, dynamic>) {
         // Handle Map format
         batchNumber = (batch['batchNumber'] ?? batch['batch_number'] ?? batch['batchId'] ?? batch['batch_id'] ?? '').toString().trim().toUpperCase();
-        expiryDate = batch['expiryDate']?.toString() ?? batch['expiry_date']?.toString();
       } else {
         // Handle BatchModel object
         batchNumber = (batch.batchNumber ?? batch.batchId ?? '').toString().trim().toUpperCase();
-        expiryDate = batch.expiryDate;
       }
       
       if (batchNumber.isEmpty) continue;
 
-      // Step 1: Optimized batch number search
+      // Enhanced batch number search with improved sensitivity
       final batchSimilarity = _findBatchNumberOptimized(batchNumber, normalizedText, words, wordSet);
       
+      // Add all matches above minimum threshold
       if (batchSimilarity >= similarityThreshold) {
-        _logger.logOcr('BATCH_FOUND: ${batchNumber} found with ${(batchSimilarity * 100).toInt()}% similarity');
-        
-        // Step 2: Optimized expiry date search
-        bool expiryFound = false;
-        if (expiryDate != null) {
-          expiryFound = _searchBatchExpiryOptimized(expiryDate.toString(), extractedText);
-          _logger.logOcr('EXPIRY_CHECK: ${expiryDate} ${expiryFound ? 'FOUND' : 'NOT FOUND'} in text');
-        } else {
-          // If no expiry date in batch, consider it valid
-          expiryFound = true;
-          _logger.logOcr('EXPIRY_CHECK: No expiry date in batch, considering valid');
-        }
-        
-        if (expiryFound) {
-          // Both conditions met - exact match
-          exactMatches.add(BatchMatchResult(
-            batch: batch,
-            similarity: batchSimilarity,
-            expiryValid: true,
-          ));
-          _logger.logOcr('EXACT_MATCH: Added ${batchNumber} as exact match (batch + expiry found)');
-        } else {
-          // Only batch found, not expiry - add to nearest matches
-          nearestMatches.add(BatchMatchResult(
-            batch: batch,
-            similarity: batchSimilarity,
-            expiryValid: false,
-          ));
-          _logger.logOcr('NEAREST_MATCH: Added ${batchNumber} as nearest match (batch found, expiry missing)');
-        }
-      } else if (batchSimilarity > 0.60) { // Only add reasonable near-matches
-        nearestMatches.add(BatchMatchResult(
+        allMatches.add(BatchMatchResult(
           batch: batch,
           similarity: batchSimilarity,
-          expiryValid: false,
+          expiryValid: true, // Always true since we're not checking expiry
         ));
+        _logger.logOcr('BATCH_MATCH: ${batchNumber} found with ${(batchSimilarity * 100).toInt()}% similarity');
       }
     }
     
-    // Sort exact matches by similarity (highest first)
-    exactMatches.sort((a, b) => b.similarity.compareTo(a.similarity));
+    // Sort all matches by similarity (highest first)
+    allMatches.sort((a, b) => b.similarity.compareTo(a.similarity));
     
-    if (exactMatches.isNotEmpty) {
-      _logger.logOcr('MATCH_RESULTS: Found ${exactMatches.length} exact matches (batch + expiry)');
-      return exactMatches;
-    }
-    
-    // No exact matches - return top 2 nearest matches for user decision
-    nearestMatches.sort((a, b) => b.similarity.compareTo(a.similarity));
-    final topNearest = nearestMatches.take(2).toList();
-    
-    _logger.logOcr('MATCH_RESULTS: No exact matches found, returning ${topNearest.length} nearest matches for user decision');
-    return topNearest;
+    _logger.logOcr('MATCH_RESULTS: Found ${allMatches.length} batch matches, returning sorted by confidence');
+    return allMatches;
   }
 
-  /// OPTIMIZED: Fast batch number search using word-based approach and caching
+  /// OPTIMIZED: Fast batch number search with enhanced sensitivity for single character differences
   /// Time complexity: O(n) instead of O(n²)
   double _findBatchNumberOptimized(String batchNumber, String extractedText, List<String> words, Set<String> wordSet) {
     _logger.logOcr('OPTIMIZED_BATCH_SEARCH: Looking for "$batchNumber" in text');
@@ -695,9 +649,10 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
       return 1.0;
     }
     
-    // Method 2: Word-based fuzzy matching (O(n) instead of O(n²))
+    // Method 2: Enhanced word-based fuzzy matching with better sensitivity
     for (final word in words) {
-      if ((word.length - batchNumber.length).abs() <= 3) { // Quick length filter
+      // Relaxed length filter for better single character difference detection
+      if ((word.length - batchNumber.length).abs() <= 2) { // Allow 2 character difference
         final similarity = _optimizedLevenshteinSimilarity(batchNumber, word);
         if (similarity > bestSimilarity) {
           bestSimilarity = similarity;
@@ -707,10 +662,11 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
       }
     }
     
-    // Method 3: Sliding window only for very short batch numbers (length <= 6)
-    if (bestSimilarity < 0.8 && batchNumber.length <= 6) {
+    // Method 3: Enhanced sliding window for all batch numbers with better precision
+    if (bestSimilarity < 0.9) { // Lower threshold to trigger sliding window
       final batchLength = batchNumber.length;
-      for (int i = 0; i <= extractedText.length - batchLength; i += 2) { // Skip every other position for speed
+      // Check every position for maximum sensitivity
+      for (int i = 0; i <= extractedText.length - batchLength; i++) {
         final segment = extractedText.substring(i, i + batchLength);
         final similarity = _optimizedLevenshteinSimilarity(batchNumber, segment);
         if (similarity > bestSimilarity) {
@@ -729,237 +685,19 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
     return bestSimilarity;
   }
 
-  /// OPTIMIZED: Fast expiry date search with comprehensive medical date formats
-  /// Uses cached date format generation and optimized string matching
-  bool _searchBatchExpiryOptimized(String batchExpiryDate, String extractedText) {
-    _logger.logOcr('OPTIMIZED_EXPIRY_SEARCH: Looking for expiry "$batchExpiryDate" in text');
-    
-    // FIRST: Check for exact match (backend format as-is)
-    final normalizedText = extractedText.toUpperCase();
-    final normalizedExpiry = batchExpiryDate.toUpperCase();
-    
-    if (normalizedText.contains(normalizedExpiry)) {
-      _logger.logOcr('OPTIMIZED_EXPIRY_SEARCH: DIRECT EXACT MATCH found for "$batchExpiryDate"');
-      return true;
-    }
-    
-    // Check cache first
-    if (_dateFormatCache.containsKey(batchExpiryDate)) {
-      final cachedFormats = _dateFormatCache[batchExpiryDate]!;
-      return _searchFormatsInText(cachedFormats, extractedText);
-    }
-    
-    // Generate comprehensive date formats for medical/hospital use
-    final dateFormats = _generateComprehensiveMedicalDateFormats(batchExpiryDate);
-    
-    // Cache the generated formats
-    _dateFormatCache[batchExpiryDate] = dateFormats;
-    
-    _logger.logOcr('OPTIMIZED_EXPIRY_SEARCH: Generated ${dateFormats.length} formats to search');
-    
-    return _searchFormatsInText(dateFormats, extractedText);
-  }
-
-  /// Search multiple date formats efficiently
-  bool _searchFormatsInText(List<String> formats, String extractedText) {
-    final normalizedText = extractedText.toUpperCase();
-    
-    _logger.logOcr('OPTIMIZED_EXPIRY_SEARCH: Searching in text: "${extractedText.substring(0, extractedText.length > 100 ? 100 : extractedText.length)}"...');
-    _logger.logOcr('OPTIMIZED_EXPIRY_SEARCH: Generated formats: ${formats.take(10).join(", ")}${formats.length > 10 ? "... (${formats.length} total)" : ""}');
-    
-    for (final format in formats) {
-      final normalizedFormat = format.toUpperCase();
-      if (normalizedText.contains(normalizedFormat)) {
-        _logger.logOcr('OPTIMIZED_EXPIRY_SEARCH: EXACT MATCH found for format "$format"');
-        return true;
-      }
-    }
-    
-    _logger.logOcr('OPTIMIZED_EXPIRY_SEARCH: No exact matches found for any format');
-    return false;
-  }
-
-  /// COMPREHENSIVE: Generate extensive medical date formats including hospital-specific patterns
-  List<String> _generateComprehensiveMedicalDateFormats(String dateStr) {
-    final formats = <String>[];
-    
-    try {
-      // Try to parse the input date
-      DateTime? date;
-      final cleanDateStr = dateStr.trim();
-      
-      // Extended input formats for medical context
-      final inputFormats = [
-        'yyyy-MM-dd', 'dd/MM/yyyy', 'MM/dd/yyyy', 'dd-MM-yyyy', 
-        'MM-dd-yyyy', 'yyyy/MM/dd', 'dd MMM yyyy', 'MMM dd yyyy',
-        'dd-MMM-yyyy', 'yyyy-MMM-dd', 'ddMMyyyy', 'MMyyyy',
-        'dd.MM.yyyy', 'MM.yyyy', 'yyyy.MM.dd', 'ddMMyy', 'MMyy',
-        'dd/MM/yy', 'MM/yy', 'yyyy-MM', 'yyyyMMdd'
-      ];
-      
-      for (final inputFormat in inputFormats) {
-        try {
-          date = DateFormat(inputFormat).parse(cleanDateStr);
-          break;
-        } catch (e) {
-          continue;
-        }
-      }
-      
-      if (date == null) {
-        _logger.logOcr('COMPREHENSIVE_DATE_FORMAT: Failed to parse date "$dateStr", using as-is');
-        return [dateStr]; // Return original if can't parse
-      }
-      
-      // COMPREHENSIVE MEDICAL DATE FORMATS
-      final outputFormats = [
-        // FDA Medical Device Standard (Mandatory)
-        'yyyy-MM-dd',   // 2026-03-31 (FDA required format)
-        
-        // Common US Hospital Formats
-        'MM/dd/yyyy',   // 03/31/2026
-        'MM/dd/yy',     // 03/31/26
-        'MM/yyyy',      // 03/2026
-        'MM/yy',        // 03/26
-        
-        // European Medical Standards
-        'dd/MM/yyyy',   // 31/03/2026
-        'dd/MM/yy',     // 31/03/26
-        'dd.MM.yyyy',   // 31.03.2026
-        'dd.MM.yy',     // 31.03.26
-        'dd-MM-yyyy',   // 31-03-2026
-        'dd-MM-yy',     // 31-03-26
-        
-        // International Standards
-        'yyyy/MM/dd',   // 2026/03/31
-        'yyyy.MM.dd',   // 2026.03.31
-        'yyyy MM dd',   // 2026 03 31
-        
-        // NDC/Barcode Formats
-        'yyyyMMdd',     // 20260331
-        'ddMMyyyy',     // 31032026
-        'MMyyyy',       // 032026
-        'ddMMyy',       // 310326
-        'MMyy',         // 0326
-        'yyMM',         // 2603
-        'yyyyMM',       // 202603
-        
-        // Month Name Formats (International)
-        'dd MMM yyyy',  // 31 MAR 2026
-        'MMM dd yyyy',  // MAR 31 2026
-        'dd-MMM-yyyy',  // 31-MAR-2026
-        'MMM-yyyy',     // MAR-2026
-        'yyyy-MMM-dd',  // 2026-MAR-31
-        'yyyy MMM dd',  // 2026 MAR 31
-        'dd MMM yy',    // 31 MAR 26
-        'MMM dd yy',    // MAR 31 26
-        'MMM yy',       // MAR 26
-        'MMMyyyy',      // MAR2026
-        'MMMdd',        // MAR31
-        
-        // Short formats (common on small labels)
-        'MM.yy',        // 03.26
-        'MM-yy',        // 03-26
-        'yy.MM',        // 26.03
-        'yy-MM',        // 26-03
-        'yy/MM',        // 26/03
-        
-        // Compact formats
-        'MMyy',         // 0326
-        'yyMM',         // 2603
-        'Myy',          // 326 (single digit month)
-        'MMyyyy',       // 032026
-        'yyyyMM',       // 202603
-        
-        // Slash variations
-        'M/yy',         // 3/26 (single digit month)
-        'M/yyyy',       // 3/2026
-        'dd/M/yy',      // 31/3/26
-        'dd/M/yyyy',    // 31/3/2026
-        'M/dd/yy',      // 3/31/26
-        'M/dd/yyyy',    // 3/31/2026
-      ];
-      
-      // Generate all possible formats
-      for (final outputFormat in outputFormats) {
-        try {
-          final formatted = DateFormat(outputFormat).format(date);
-          if (!formats.contains(formatted)) {
-            formats.add(formatted);
-          }
-        } catch (e) {
-          // Skip invalid formats
-          continue;
-        }
-      }
-      
-      // Add context-aware hospital patterns
-      final contextFormats = _generateContextAwareFormats(date);
-      formats.addAll(contextFormats);
-      
-      // Remove duplicates and sort by likelihood (shorter formats first for better matching)
-      final uniqueFormats = formats.toSet().toList();
-      uniqueFormats.sort((a, b) => a.length.compareTo(b.length));
-      
-      _logger.logOcr('COMPREHENSIVE_DATE_FORMAT: Generated ${uniqueFormats.length} formats from "$dateStr"');
-      return uniqueFormats;
-      
-    } catch (e) {
-      _logger.logOcr('COMPREHENSIVE_DATE_FORMAT: Error generating formats for "$dateStr": $e');
-      return [dateStr]; // Return original if error
-    }
-  }
-
-  /// Generate context-aware hospital date formats
-  List<String> _generateContextAwareFormats(DateTime date) {
-    final contextFormats = <String>[];
-    
-    try {
-      // Expiry context patterns
-      final basicDate = DateFormat('MM/dd/yyyy').format(date);
-      final shortDate = DateFormat('MM/yy').format(date);
-      final isoDate = DateFormat('yyyy-MM-dd').format(date);
-      final monthYear = DateFormat('MMM yyyy').format(date);
-      
-      contextFormats.addAll([
-        'EXP $basicDate',
-        'EXP $shortDate',
-        'EXP $isoDate',
-        'EXP $monthYear',
-        'EXPIRY $basicDate',
-        'EXPIRES $basicDate',
-        'USE BY $basicDate',
-        'BEST BY $basicDate',
-        'DISCARD AFTER $basicDate',
-        'VALID UNTIL $basicDate',
-        'GOOD UNTIL $basicDate',
-        'LOT $shortDate',
-        'BATCH $shortDate',
-        'MFG $basicDate',
-        'STERILE UNTIL $basicDate',
-        'DO NOT USE AFTER $basicDate',
-      ]);
-      
-    } catch (e) {
-      _logger.logOcr('CONTEXT_FORMAT_ERROR: $e');
-    }
-    
-    return contextFormats;
-  }
-
-  /// Find nearest batch matches for fallback when no exact matches found
+  /// Find all batch matches sorted by similarity - no threshold failures
   /// OPTIMIZED version with better performance
   List<BatchMatchResult> findNearestBatchMatchesOptimized({
     required String extractedText,
     required List<dynamic> batches,
-    int maxResults = 2,
+    int maxResults = 10, // Increased to show more options
   }) {
     final List<BatchMatchResult> allMatches = [];
     final normalizedText = extractedText.trim().toUpperCase();
     final words = normalizedText.split(RegExp(r'\s+'));
     final wordSet = Set<String>.from(words);
     
-    _logger.logOcr('OPTIMIZED_NEAREST_SEARCH: Finding nearest matches (no exact expiry match required)');
+    _logger.logOcr('OPTIMIZED_SEARCH: Finding all batch matches sorted by confidence');
     
     for (final batch in batches) {
       // Handle both BatchModel objects and Map objects
@@ -975,12 +713,12 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
 
       final similarity = _findBatchNumberOptimized(batchNumber, normalizedText, words, wordSet);
       
-      // Only include reasonable matches
-      if (similarity > 0.5) {
+      // Include all matches above minimum threshold (25% for inclusivity)
+      if (similarity > 0.25) {
         allMatches.add(BatchMatchResult(
           batch: batch,
           similarity: similarity,
-          expiryValid: false, // Mark as not having exact expiry match
+          expiryValid: true, // Always true since we're not checking expiry
         ));
       }
     }
@@ -989,11 +727,11 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
     allMatches.sort((a, b) => b.similarity.compareTo(a.similarity));
     final result = allMatches.take(maxResults).toList();
     
-    _logger.logOcr('OPTIMIZED_NEAREST_SEARCH: Returning ${result.length} nearest matches');
+    _logger.logOcr('OPTIMIZED_SEARCH: Returning ${result.length} matches sorted by confidence');
     return result;
   }
 
-  /// OPTIMIZED: Levenshtein similarity with early termination and reduced memory allocation
+  /// ENHANCED: Levenshtein similarity with better sensitivity for single character differences
   double _optimizedLevenshteinSimilarity(String a, String b) {
     if (a == b) return 1.0;
     if (a.isEmpty || b.isEmpty) return 0.0;
@@ -1001,11 +739,18 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
     final maxLen = max(a.length, b.length);
     final minLen = min(a.length, b.length);
     
-    // Quick filter: if length difference is too big, skip expensive calculation
-    if ((maxLen - minLen) / maxLen > 0.5) return 0.0;
+    // More lenient filter: allow up to 40% length difference for better sensitivity
+    if ((maxLen - minLen) / maxLen > 0.4) return 0.0;
     
     final dist = _optimizedLevenshtein(a, b);
-    return 1.0 - (dist / maxLen);
+    final similarity = 1.0 - (dist / maxLen);
+    
+    // Boost similarity for single character differences in similar length strings
+    if (dist == 1 && (maxLen - minLen) <= 1) {
+      return max(similarity, 0.85); // Ensure single char diff gets good score
+    }
+    
+    return similarity;
   }
 
   /// OPTIMIZED: Levenshtein distance with single array instead of matrix (space optimization)
@@ -1207,36 +952,27 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
     for (final batch in batches) {
       // Handle both BatchModel objects and Map objects
       String batchNumber;
-      String? expiryDate;
       String? itemName;
       
       if (batch is Map<String, dynamic>) {
         // Handle Map format
         batchNumber = (batch['batchNumber'] ?? batch['batch_number'] ?? batch['batchId'] ?? batch['batch_id'] ?? '').toString().trim().toUpperCase();
-        expiryDate = batch['expiryDate']?.toString() ?? batch['expiry_date']?.toString();
         itemName = batch['itemName']?.toString() ?? batch['item_name']?.toString() ?? batch['productName']?.toString() ?? batch['product_name']?.toString();
       } else {
         // Handle BatchModel object
         batchNumber = (batch.batchNumber ?? batch.batchId ?? '').toString().trim().toUpperCase();
-        expiryDate = batch.expiryDate;
         itemName = batch.itemName ?? batch.productName;
       }
       
       if (batchNumber.isEmpty) continue;
       
-      // Calculate batch number similarity
+      // Calculate batch number similarity only (no expiry date matching)
       final batchSimilarity = _findBatchNumberSimilarityForCards(batchNumber, normalizedText);
       
-      // Calculate expiry date similarity
-      double expiryScore = 0.0;
-      if (expiryDate != null) {
-        expiryScore = _calculateExpiryDateSimilarityForCards(expiryDate.toString(), extractedText);
-      }
+      // Use only batch similarity (no expiry scoring)
+      final combinedScore = batchSimilarity * 100; // Convert to percentage
       
-      // Combined score (weighted: batch 70%, expiry 30%)
-      final combinedScore = (batchSimilarity * 0.7) + (expiryScore * 0.3);
-      
-      if (combinedScore >= 0.76) { // Higher threshold for more precise matching (>75%)
+      if (combinedScore >= 25) { // Lower threshold for better inclusivity (25% minimum)
         // Find requested quantity from remNumbers using intelligent matching
         int requestedQuantity = 0;
         String? matchedItemCode;
@@ -1261,7 +997,7 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
         
         allMatches.add({
           'batch': batch,
-          'confidence': combinedScore * 100,
+          'confidence': combinedScore,
           'requestedQuantity': requestedQuantity,
           'itemCode': matchedItemCode,
           'purchaseOrderNumber': purchaseOrderNumber,
@@ -1292,32 +1028,6 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
     for (final word in words) {
       if ((word.length - batchNumber.length).abs() <= 3) {
         final similarity = _calculateLevenshteinSimilarityForCards(batchNumber, word);
-        if (similarity > bestSimilarity) {
-          bestSimilarity = similarity;
-        }
-      }
-    }
-    
-    return bestSimilarity;
-  }
-
-  /// Calculate expiry date similarity for cards
-  double _calculateExpiryDateSimilarityForCards(String expiryDate, String extractedText) {
-    final possibleFormats = _generateExpiryDateFormatsForCards(expiryDate);
-    
-    for (final format in possibleFormats) {
-      if (extractedText.contains(format)) {
-        return 1.0;
-      }
-    }
-    
-    // Check for partial matches
-    double bestSimilarity = 0.0;
-    final words = extractedText.split(RegExp(r'\s+'));
-    
-    for (final format in possibleFormats) {
-      for (final word in words) {
-        final similarity = _calculateLevenshteinSimilarityForCards(format, word);
         if (similarity > bestSimilarity) {
           bestSimilarity = similarity;
         }
@@ -1403,25 +1113,6 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
     }).toList();
   }
 
-  /// Generate expiry date formats for cards
-  List<String> _generateExpiryDateFormatsForCards(String expiryDate) {
-    try {
-      final date = DateTime.parse(expiryDate);
-      return [
-        DateFormat('yyyy-MM-dd').format(date),
-        DateFormat('MM/yyyy').format(date),
-        DateFormat('MM/yy').format(date),
-        DateFormat('MMM yyyy').format(date),
-        DateFormat('MMM yy').format(date),
-        DateFormat('dd/MM/yyyy').format(date),
-        DateFormat('dd/MM/yy').format(date),
-        DateFormat('dd-MM-yyyy').format(date),
-        DateFormat('dd-MM-yy').format(date),
-      ];
-    } catch (e) {
-      return [expiryDate];
-    }
-  }
 }
 
 /// Result class for batch matching (same as before)
