@@ -585,13 +585,14 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
   }) {
     final List<BatchMatchResult> allMatches = [];
     final normalizedText = extractedText.trim().toUpperCase();
+    final cleanedText = _cleanOcrText(normalizedText);
     
     _logger.logOcr('OPTIMIZED_MATCH_START: Beginning batch number only matching process');
-    _logger.logOcr('MATCH_INPUT_TEXT: Extracted text: "$extractedText"');
+    _logger.logOcr('MATCH_INPUT_TEXT: Original: "$extractedText", Cleaned: "$cleanedText"');
     _logger.logOcr('MATCH_AVAILABLE_BATCHES: ${batches.length} batches available for matching');
 
-    // Pre-process text for faster searching
-    final words = normalizedText.split(RegExp(r'\s+'));
+    // Pre-process CLEANED text for faster searching
+    final words = cleanedText.split(RegExp(r'\s+'));
     final wordSet = Set<String>.from(words);
 
     for (final batch in batches) {
@@ -608,8 +609,8 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
       
       if (batchNumber.isEmpty) continue;
 
-      // Enhanced batch number search with improved sensitivity
-      final batchSimilarity = _findBatchNumberOptimized(batchNumber, normalizedText, words, wordSet);
+      // Enhanced batch number search with improved sensitivity - use cleaned text
+      final batchSimilarity = _findBatchNumberOptimized(batchNumber, cleanedText, words, wordSet);
       
       // Add all matches above minimum threshold
       if (batchSimilarity >= similarityThreshold) {
@@ -631,15 +632,12 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
 
   /// OPTIMIZED: Fast batch number search with enhanced sensitivity for single character differences
   /// Time complexity: O(n) instead of O(n²)
+  /// extractedText should already be cleaned
   double _findBatchNumberOptimized(String batchNumber, String extractedText, List<String> words, Set<String> wordSet) {
-    _logger.logOcr('OPTIMIZED_BATCH_SEARCH: Looking for "$batchNumber" in text');
-    
-    // Clean extracted text by removing common OCR noise characters
-    final cleanedText = _cleanOcrText(extractedText);
-    _logger.logOcr('OPTIMIZED_BATCH_SEARCH: Cleaned text: "$cleanedText" (from "$extractedText")');
+    _logger.logOcr('OPTIMIZED_BATCH_SEARCH: Looking for "$batchNumber" in cleaned text: "$extractedText"');
     
     // Cache key for memoization
-    final cacheKey = '$batchNumber|$cleanedText';
+    final cacheKey = '$batchNumber|$extractedText';
     if (_similarityCache.containsKey(cacheKey)) {
       return _similarityCache[cacheKey]!;
     }
@@ -647,15 +645,14 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
     double bestSimilarity = 0.0;
     
     // Method 1: Direct substring search (fastest)
-    if (cleanedText.contains(batchNumber)) {
+    if (extractedText.contains(batchNumber)) {
       _logger.logOcr('OPTIMIZED_BATCH_SEARCH: Exact match found for "$batchNumber"');
       _similarityCache[cacheKey] = 1.0;
       return 1.0;
     }
     
     // Method 2: Enhanced word-based fuzzy matching with better sensitivity
-    final cleanedWords = cleanedText.split(RegExp(r'\s+'));
-    for (final word in cleanedWords) {
+    for (final word in words) {
       // Relaxed length filter for better single character difference detection
       if ((word.length - batchNumber.length).abs() <= 3) { // Allow 3 character difference
         final similarity = _optimizedLevenshteinSimilarity(batchNumber, word);
@@ -672,8 +669,8 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
     if (bestSimilarity < 0.9) { // Lower threshold to trigger sliding window
       final batchLength = batchNumber.length;
       // Check every position for maximum sensitivity
-      for (int i = 0; i <= cleanedText.length - batchLength; i++) {
-        final segment = cleanedText.substring(i, i + batchLength);
+      for (int i = 0; i <= extractedText.length - batchLength; i++) {
+        final segment = extractedText.substring(i, i + batchLength);
         final similarity = _optimizedLevenshteinSimilarity(batchNumber, segment);
         if (similarity > bestSimilarity) {
           bestSimilarity = similarity;
@@ -686,7 +683,7 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
     
     _logger.logOcr('OPTIMIZED_BATCH_SEARCH: Best similarity for "$batchNumber": ${(bestSimilarity * 100).toInt()}%');
     
-    // Cache the result using cleaned text
+    // Cache the result
     _similarityCache[cacheKey] = bestSimilarity;
     
     return bestSimilarity;
@@ -720,7 +717,7 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
       
       if (batchNumber.isEmpty) continue;
 
-      final similarity = _findBatchNumberOptimized(batchNumber, normalizedText, words, wordSet);
+      final similarity = _findBatchNumberOptimized(batchNumber, cleanedText, words, wordSet);
       
       // Include all matches above minimum threshold (20% for inclusivity)
       if (similarity > 0.20) {
@@ -748,26 +745,34 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
     final maxLen = max(a.length, b.length);
     final minLen = min(a.length, b.length);
     
-    // More lenient filter: allow up to 50% length difference for better sensitivity
-    if ((maxLen - minLen) / maxLen > 0.5) return 0.0;
+    // More lenient filter: allow up to 60% length difference for better sensitivity
+    if ((maxLen - minLen) / maxLen > 0.6) return 0.0;
     
     final dist = _optimizedLevenshtein(a, b);
     final similarity = 1.0 - (dist / maxLen);
     
-    // Enhanced boost for small differences
-    if (dist <= 2) {
+    // Enhanced boost for small differences - be very generous
+    if (dist <= 3) {
       if (dist == 1) {
-        // Single character difference - give high score
-        return max(similarity, 0.90); // 90% for single char diff
+        // Single character difference - give very high score
+        return max(similarity, 0.95); // 95% for single char diff
       } else if (dist == 2) {
-        // Two character difference - still good score  
-        return max(similarity, 0.80); // 80% for two char diff
+        // Two character difference - still very good score  
+        return max(similarity, 0.90); // 90% for two char diff
+      } else if (dist == 3) {
+        // Three character difference - good score
+        return max(similarity, 0.85); // 85% for three char diff
       }
     }
     
     // Additional boost for similar length strings with few differences
-    if ((maxLen - minLen) <= 1 && dist <= 3) {
-      return max(similarity, 0.75); // 75% for 3 or fewer differences in similar length
+    if ((maxLen - minLen) <= 2 && dist <= 4) {
+      return max(similarity, 0.80); // 80% for 4 or fewer differences in similar length
+    }
+    
+    // Special handling for very short strings (common in batch numbers)
+    if (maxLen <= 6 && dist <= 2) {
+      return max(similarity, 0.85); // Be more forgiving for short strings
     }
     
     return similarity;
@@ -775,16 +780,48 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
 
   /// Clean OCR text by removing common noise characters and patterns
   String _cleanOcrText(String text) {
-    return text
+    String cleaned = text
         // Remove asterisks that often appear around text
         .replaceAll('*', '')
-        // Remove common OCR noise characters
+        // Remove parentheses and brackets
+        .replaceAll(RegExp(r'[()[\]{}]'), '')
+        // Remove special punctuation except dots and dashes
+        .replaceAll(RegExp(r'[!@#$%^&+=<>?/\\|`~"]'), '')
+        // Keep only alphanumeric, spaces, dots, and dashes
         .replaceAll(RegExp(r'[^\w\s.-]'), '')
         // Normalize multiple spaces to single space
         .replaceAll(RegExp(r'\s+'), ' ')
         // Trim whitespace
         .trim()
         .toUpperCase();
+        
+    // Additional cleaning for batch number specific patterns
+    // Remove any remaining standalone non-alphanumeric characters
+    cleaned = cleaned.replaceAll(RegExp(r'\b[^A-Z0-9]+\b'), ' ');
+    
+    // Normalize spaces again after additional cleaning
+    cleaned = cleaned.replaceAll(RegExp(r'\s+'), ' ').trim();
+    
+    return cleaned;
+  }
+
+  /// DEBUG: Test specific comparison for debugging
+  Map<String, dynamic> debugCompareStrings(String extracted, String batch) {
+    final cleaned = _cleanOcrText(extracted);
+    final similarity = _optimizedLevenshteinSimilarity(batch, cleaned);
+    final distance = _optimizedLevenshtein(batch, cleaned);
+    
+    _logger.logOcr('DEBUG_COMPARE: "$extracted" → "$cleaned" vs "$batch"');
+    _logger.logOcr('DEBUG_COMPARE: Distance=$distance, Similarity=${(similarity * 100).toInt()}%');
+    
+    return {
+      'original': extracted,
+      'cleaned': cleaned,
+      'batch': batch,
+      'distance': distance,
+      'similarity': similarity,
+      'percentage': (similarity * 100).toInt(),
+    };
   }
 
   /// OPTIMIZED: Levenshtein distance with single array instead of matrix (space optimization)
