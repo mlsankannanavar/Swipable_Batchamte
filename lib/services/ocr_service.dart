@@ -263,13 +263,19 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
       
       if (extractedText == null || extractedText.isEmpty) {
         stopwatch.stop();
-        _logger.logOcr('No text extracted from image', success: false);
+        _logger.logOcr('No text extracted from image - returning all batches sorted by expiry', success: false);
+        
+        // Instead of error, return all batches sorted by expiry date (closest to expiry first)
+        final allBatchesByExpiry = _getAllBatchesSortedByExpiry(availableBatches);
+        
         return {
-          'success': false,
-          'extractedText': '',
-          'matches': <BatchMatchResult>[],
-          'nearestMatches': <BatchMatchResult>[],
-          'error': 'No text extracted from image'
+          'success': true, // Changed to true to allow continuation
+          'extractedText': '', // Empty extracted text
+          'matches': allBatchesByExpiry,
+          'nearestMatches': allBatchesByExpiry,
+          'confidence': 0.0,
+          'imageBytes': croppedImageBytes,
+          'noTextExtracted': true, // Flag to indicate no text was extracted
         };
       }
 
@@ -805,6 +811,97 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
     return cleaned;
   }
 
+  /// Get all batches sorted by expiry date (closest to expiry first) with 0% confidence
+  /// Used when no text is extracted to allow user continuation
+  List<BatchMatchResult> _getAllBatchesSortedByExpiry(List<dynamic> batches) {
+    _logger.logOcr('NO_TEXT_FALLBACK: Sorting all ${batches.length} batches by expiry date (closest first)');
+    
+    final List<BatchMatchResult> allBatches = [];
+    
+    for (final batch in batches) {
+      allBatches.add(BatchMatchResult(
+        batch: batch,
+        similarity: 0.0, // 0% confidence since no text was extracted
+        expiryValid: true, // Always true
+      ));
+    }
+    
+    // Sort by expiry date (closest to expiry first)
+    allBatches.sort((a, b) {
+      final expiryA = _getExpiryDate(a.batch);
+      final expiryB = _getExpiryDate(b.batch);
+      
+      // If both have valid dates, sort by date (earliest first)
+      if (expiryA != null && expiryB != null) {
+        return expiryA.compareTo(expiryB);
+      }
+      
+      // If only A has valid date, A comes first
+      if (expiryA != null && expiryB == null) return -1;
+      
+      // If only B has valid date, B comes first
+      if (expiryA == null && expiryB != null) return 1;
+      
+      // If neither has valid date, maintain original order
+      return 0;
+    });
+    
+    _logger.logOcr('NO_TEXT_FALLBACK: Sorted ${allBatches.length} batches by expiry date');
+    return allBatches;
+  }
+
+  /// Extract and parse expiry date from batch object
+  DateTime? _getExpiryDate(dynamic batch) {
+    String? expiryString;
+    
+    if (batch is Map<String, dynamic>) {
+      expiryString = batch['expiryDate']?.toString() ?? batch['expiry_date']?.toString();
+    } else {
+      expiryString = batch.expiryDate?.toString();
+    }
+    
+    if (expiryString == null || expiryString.isEmpty) return null;
+    
+    // Try to parse common date formats
+    try {
+      // Try ISO format first (YYYY-MM-DD)
+      if (RegExp(r'^\d{4}-\d{2}-\d{2}').hasMatch(expiryString)) {
+        return DateTime.parse(expiryString);
+      }
+      
+      // Try DD/MM/YYYY format
+      final ddmmyyyyMatch = RegExp(r'^(\d{2})/(\d{2})/(\d{4})').firstMatch(expiryString);
+      if (ddmmyyyyMatch != null) {
+        final day = int.parse(ddmmyyyyMatch.group(1)!);
+        final month = int.parse(ddmmyyyyMatch.group(2)!);
+        final year = int.parse(ddmmyyyyMatch.group(3)!);
+        return DateTime(year, month, day);
+      }
+      
+      // Try MM/DD/YYYY format
+      final mmddyyyyMatch = RegExp(r'^(\d{2})/(\d{2})/(\d{4})').firstMatch(expiryString);
+      if (mmddyyyyMatch != null) {
+        final month = int.parse(mmddyyyyMatch.group(1)!);
+        final day = int.parse(mmddyyyyMatch.group(2)!);
+        final year = int.parse(mmddyyyyMatch.group(3)!);
+        return DateTime(year, month, day);
+      }
+      
+      // Try YYYY-MM-DD format with time
+      final isoWithTimeMatch = RegExp(r'^(\d{4})-(\d{2})-(\d{2})').firstMatch(expiryString);
+      if (isoWithTimeMatch != null) {
+        final year = int.parse(isoWithTimeMatch.group(1)!);
+        final month = int.parse(isoWithTimeMatch.group(2)!);
+        final day = int.parse(isoWithTimeMatch.group(3)!);
+        return DateTime(year, month, day);
+      }
+    } catch (e) {
+      _logger.logOcr('Failed to parse expiry date: "$expiryString"', success: false);
+    }
+    
+    return null;
+  }
+
   /// DEBUG: Test specific comparison for debugging
   Map<String, dynamic> debugCompareStrings(String extracted, String batch) {
     final cleaned = _cleanOcrText(extracted);
@@ -1008,6 +1105,15 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
     final purchaseOrderNumber = sessionDetails?['purchaseOrderNumber'] as String?;
     final saleOrderNumber = sessionDetails?['saleOrderNumber'] as String?;
     
+    // Special handling for empty extracted text (no OCR text extracted)
+    if (extractedText.isEmpty) {
+      _logger.logOcr('TOP5_MATCH_EMPTY_TEXT: No text extracted, returning all batches sorted by expiry');
+      return _getAllBatchesForCardsWithZeroConfidence(
+        batches: batches,
+        sessionDetails: sessionDetails,
+      );
+    }
+    
     // Create mapping for item codes to remNumbers
     final Map<String, int> itemRemNumberMap = {};
     final Map<String, String> itemCodeMap = {};
@@ -1147,6 +1253,72 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
     final index = allMatches.length % itemsWithRemNumbers.length;
     final selectedItem = itemsWithRemNumbers[index];
     return selectedItem['itemCode'] as String?;
+  }
+
+  /// Get all batches for cards with 0% confidence when no text is extracted
+  /// Sorted by expiry date (closest to expiry first)
+  List<dynamic> _getAllBatchesForCardsWithZeroConfidence({
+    required List<dynamic> batches,
+    Map<String, dynamic>? sessionDetails,
+  }) {
+    _logger.logOcr('CARDS_NO_TEXT: Generating cards for all batches with 0% confidence');
+    
+    final List<dynamic> allMatches = [];
+    
+    // Extract session details for remNumbers mapping
+    final itemsWithRemNumbers = sessionDetails?['itemsWithRemNumbers'] as List<dynamic>? ?? [];
+    final purchaseOrderNumber = sessionDetails?['purchaseOrderNumber'] as String?;
+    final saleOrderNumber = sessionDetails?['saleOrderNumber'] as String?;
+    
+    // Add all batches with 0% confidence
+    for (final batch in batches) {
+      // Find requested quantity from remNumbers using round-robin
+      int requestedQuantity = 0;
+      String? matchedItemCode;
+      
+      if (itemsWithRemNumbers.isNotEmpty) {
+        final index = allMatches.length % itemsWithRemNumbers.length;
+        final selectedItem = itemsWithRemNumbers[index];
+        matchedItemCode = selectedItem['itemCode'] as String?;
+        requestedQuantity = selectedItem['remNumber'] as int? ?? 0;
+      }
+      
+      allMatches.add({
+        'batch': batch,
+        'confidence': 0.0, // 0% confidence since no text was extracted
+        'requestedQuantity': requestedQuantity,
+        'itemCode': matchedItemCode,
+        'purchaseOrderNumber': purchaseOrderNumber,
+        'saleOrderNumber': saleOrderNumber,
+        'noTextExtracted': true, // Flag to show "No Text Extracted" message
+      });
+    }
+    
+    // Sort by expiry date (closest to expiry first)
+    allMatches.sort((a, b) {
+      final expiryA = _getExpiryDate(a['batch']);
+      final expiryB = _getExpiryDate(b['batch']);
+      
+      // If both have valid dates, sort by date (earliest first)
+      if (expiryA != null && expiryB != null) {
+        return expiryA.compareTo(expiryB);
+      }
+      
+      // If only A has valid date, A comes first
+      if (expiryA != null && expiryB == null) return -1;
+      
+      // If only B has valid date, B comes first
+      if (expiryA == null && expiryB != null) return 1;
+      
+      // If neither has valid date, maintain original order
+      return 0;
+    });
+    
+    // Take top 10 (or all if less than 10) when no text extracted - more options needed
+    final top10 = allMatches.take(10).toList();
+    
+    _logger.logOcr('CARDS_NO_TEXT: Generated ${top10.length} cards sorted by expiry date');
+    return top10;
   }
 
   /// Convert match results to BatchMatch objects
