@@ -130,6 +130,17 @@ class ApiService {
     required String extractedText,
     required bool selectedFromOptions,
     List<String>? alternativeMatches,
+    // Additional fields for logging
+    String? salesOrder,
+    String? purchaseOrder,
+    String? unitId,
+    String? storeId,
+    String? rackNum,
+    String? locatorInfo,
+    String? itemName,
+    int? requestedQuantity,
+    List<int>? imageBytes,
+    int? processingTime,
   }) async {
     final endpoint = '/api/submit-mobile-batch/$sessionId';
     final body = {
@@ -143,7 +154,265 @@ class ApiService {
       'selectedFromOptions': selectedFromOptions,
       'alternativeMatches': alternativeMatches ?? [],
     };
-    return await post(endpoint, body: body);
+    
+    // Submit the batch first
+    final result = await post(endpoint, body: body);
+    
+    // Then submit to logging API asynchronously in background (don't await)
+    _submitMobileLogAsync(
+      sessionId: sessionId,
+      salesOrder: salesOrder,
+      purchaseOrder: purchaseOrder,
+      unitId: unitId,
+      storeId: storeId,
+      rackNum: rackNum,
+      locatorInfo: locatorInfo,
+      itemName: itemName,
+      batchNumber: batchNumber,
+      requestedQuantity: requestedQuantity,
+      submittedQuantity: quantity,
+      ocrConfidence: confidence,
+      imageBytes: imageBytes,
+      extractedText: extractedText,
+      processingTime: processingTime,
+      matchType: matchType,
+      responseCode: result.statusCode ?? 0,
+    );
+    
+    return result;
+  }
+
+  /// Submit mobile log data to the logging API
+  Future<ApiResponse<Map<String, dynamic>>> submitMobileLog({
+    required String sessionId,
+    String? salesOrder,
+    String? purchaseOrder,
+    String? unitId,
+    String? storeId,
+    String? rackNum,
+    String? locatorInfo,
+    String? itemName,
+    String? batchNumber,
+    int? requestedQuantity,
+    int? submittedQuantity,
+    int? ocrConfidence,
+    List<int>? imageBytes,
+    String? extractedText,
+    int? processingTime,
+    String? matchType,
+    int? responseCode,
+  }) async {
+    final endpoint = '/api/submit-mobile-log';
+    final stopwatch = Stopwatch()..start();
+    
+    _logger.logApp('MOBILE_LOG_START: Initiating mobile log submission', data: {
+      'sessionId': sessionId,
+      'batchNumber': batchNumber,
+      'itemName': itemName,
+      'endpoint': endpoint,
+      'startTime': DateTime.now().toIso8601String(),
+    });
+    
+    String? base64Image;
+    int imageEncodingTimeMs = 0;
+    if (imageBytes != null && imageBytes.isNotEmpty) {
+      final imageStopwatch = Stopwatch()..start();
+      try {
+        base64Image = base64.encode(imageBytes);
+        imageStopwatch.stop();
+        imageEncodingTimeMs = imageStopwatch.elapsed.inMilliseconds;
+        
+        _logger.logApp('MOBILE_LOG_IMAGE: Image encoded successfully', data: {
+          'originalSizeBytes': imageBytes.length,
+          'base64SizeBytes': base64Image.length,
+          'encodingTimeMs': imageEncodingTimeMs,
+          'compressionRatio': (imageBytes.length / base64Image.length * 100).toStringAsFixed(2),
+        });
+      } catch (e) {
+        imageStopwatch.stop();
+        _logger.logError('MOBILE_LOG_IMAGE_ERROR: Failed to encode image for logging', 
+          error: e, 
+          category: 'MOBILE_LOG_IMAGE');
+      }
+    }
+    
+    final body = {
+      'User': 'NH User', // Hardcoded as requested
+      'Session_Id': sessionId,
+      'SalesOrder': salesOrder ?? '',
+      'PurchaseOrder': purchaseOrder ?? '',
+      'Unit_Id': unitId ?? '',
+      'Store_Id': storeId ?? '',
+      'Rack_Num': rackNum ?? '',
+      'Locator_Info': locatorInfo ?? '',
+      'Item_Name': itemName ?? '',
+      'Batch_Number': batchNumber ?? '',
+      'Requested_Quantity': requestedQuantity ?? 0,
+      'Submitted_Quantity': submittedQuantity ?? 0,
+      'OCR_Confidence': ocrConfidence ?? 0,
+      'Image': base64Image ?? '',
+      'Extracted_Text': extractedText ?? '',
+      'Processing_Time': processingTime ?? 0,
+      'Match_Type': matchType ?? '',
+      'Response_Code': responseCode ?? 0,
+      'Timestamp': DateTime.now().toIso8601String(),
+    };
+    
+    // Calculate payload size
+    final payloadJson = json.encode(body);
+    final payloadSizeBytes = payloadJson.length;
+    
+    _logger.logApp('MOBILE_LOG_PAYLOAD: Payload prepared for submission', data: {
+      'sessionId': sessionId,
+      'batchNumber': batchNumber,
+      'itemName': itemName,
+      'payloadSizeBytes': payloadSizeBytes,
+      'payloadSizeKB': (payloadSizeBytes / 1024).toStringAsFixed(2),
+      'hasImage': base64Image != null && base64Image.isNotEmpty,
+      'imageSizeBytes': base64Image?.length ?? 0,
+      'extractedTextLength': extractedText?.length ?? 0,
+      'ocrConfidence': ocrConfidence,
+      'processingTime': processingTime,
+      'matchType': matchType,
+      'responseCode': responseCode,
+      'salesOrder': salesOrder,
+      'purchaseOrder': purchaseOrder,
+      'unitId': unitId,
+      'storeId': storeId,
+      'rackNum': rackNum,
+      'imageEncodingTimeMs': imageEncodingTimeMs,
+    });
+    
+    try {
+      final result = await post(endpoint, body: body);
+      stopwatch.stop();
+      
+      if (result.isSuccess) {
+        _logger.logApp('MOBILE_LOG_SUCCESS: Mobile log submitted successfully', 
+          level: LogLevel.success,
+          data: {
+            'sessionId': sessionId,
+            'batchNumber': batchNumber,
+            'itemName': itemName,
+            'endpoint': endpoint,
+            'statusCode': result.statusCode,
+            'totalTimeMs': stopwatch.elapsed.inMilliseconds,
+            'payloadSizeBytes': payloadSizeBytes,
+            'responseData': result.data,
+            'serverResponse': result.data?.toString() ?? 'No response data',
+          });
+      } else {
+        _logger.logError('MOBILE_LOG_FAILURE: Mobile log submission failed', 
+          error: result.error ?? 'Unknown error',
+          category: 'MOBILE_LOG');
+      }
+      
+      return result;
+    } catch (e, stackTrace) {
+      stopwatch.stop();
+      _logger.logError('MOBILE_LOG_EXCEPTION: Exception during mobile log submission', 
+        error: e, 
+        stackTrace: stackTrace,
+        category: 'MOBILE_LOG');
+      
+      return ApiResponse<Map<String, dynamic>>.error(
+        error: 'Mobile log submission failed: ${e.toString()}',
+        duration: stopwatch.elapsed,
+      );
+    }
+  }
+
+  /// Submit mobile log data asynchronously in background
+  void _submitMobileLogAsync({
+    required String sessionId,
+    String? salesOrder,
+    String? purchaseOrder,
+    String? unitId,
+    String? storeId,
+    String? rackNum,
+    String? locatorInfo,
+    String? itemName,
+    String? batchNumber,
+    int? requestedQuantity,
+    int? submittedQuantity,
+    int? ocrConfidence,
+    List<int>? imageBytes,
+    String? extractedText,
+    int? processingTime,
+    String? matchType,
+    int? responseCode,
+  }) {
+    final asyncStartTime = DateTime.now();
+    
+    _logger.logApp('MOBILE_LOG_ASYNC_START: Starting background mobile log submission', data: {
+      'sessionId': sessionId,
+      'batchNumber': batchNumber,
+      'itemName': itemName,
+      'asyncStartTime': asyncStartTime.toIso8601String(),
+      'originalResponseCode': responseCode,
+      'hasImageData': imageBytes != null && imageBytes.isNotEmpty,
+      'imageSizeBytes': imageBytes?.length ?? 0,
+      'extractedTextLength': extractedText?.length ?? 0,
+    });
+    
+    // Fire and forget - don't await this call
+    submitMobileLog(
+      sessionId: sessionId,
+      salesOrder: salesOrder,
+      purchaseOrder: purchaseOrder,
+      unitId: unitId,
+      storeId: storeId,
+      rackNum: rackNum,
+      locatorInfo: locatorInfo,
+      itemName: itemName,
+      batchNumber: batchNumber,
+      requestedQuantity: requestedQuantity,
+      submittedQuantity: submittedQuantity,
+      ocrConfidence: ocrConfidence,
+      imageBytes: imageBytes,
+      extractedText: extractedText,
+      processingTime: processingTime,
+      matchType: matchType,
+      responseCode: responseCode,
+    ).then((result) {
+      final asyncEndTime = DateTime.now();
+      final asyncDurationMs = asyncEndTime.difference(asyncStartTime).inMilliseconds;
+      
+      _logger.logApp('MOBILE_LOG_ASYNC_COMPLETE: Background mobile log submission completed', 
+        level: result.isSuccess ? LogLevel.success : LogLevel.error,
+        data: {
+          'sessionId': sessionId,
+          'batchNumber': batchNumber,
+          'itemName': itemName,
+          'asyncStartTime': asyncStartTime.toIso8601String(),
+          'asyncEndTime': asyncEndTime.toIso8601String(),
+          'asyncDurationMs': asyncDurationMs,
+          'success': result.isSuccess,
+          'statusCode': result.statusCode,
+          'resultMessage': result.message,
+          'resultError': result.error,
+          'backgroundSubmissionStatus': result.isSuccess ? 'COMPLETED_SUCCESSFULLY' : 'FAILED',
+        });
+    }).catchError((error, stackTrace) {
+      final asyncEndTime = DateTime.now();
+      final asyncDurationMs = asyncEndTime.difference(asyncStartTime).inMilliseconds;
+      
+      _logger.logApp('MOBILE_LOG_ASYNC_ERROR_DETAILS: Background mobile log failed with details', data: {
+        'sessionId': sessionId,
+        'batchNumber': batchNumber,
+        'asyncDurationMs': asyncDurationMs,
+        'errorType': error.runtimeType.toString(),
+      });
+      
+      // Log error but don't fail the main submission
+      _logger.logError('MOBILE_LOG_ASYNC_ERROR: Background mobile log submission failed', 
+        error: error, 
+        stackTrace: stackTrace,
+        category: 'MOBILE_LOG_ASYNC');
+      
+      // Don't return anything from catchError for void method
+      return null;
+    });
   }
 
   // Get filtered batches for a session

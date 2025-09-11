@@ -473,6 +473,11 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
       
       // API submission with timing
       final apiSubmissionStopwatch = Stopwatch()..start();
+      
+      // Get session details for logging
+      final currentSession = sessionProvider.currentSession;
+      final selectedRackName = sessionProvider.selectedRackName;
+      
       final resp = await apiService.submitMobileBatch(
         sessionId: sessionId,
         batchNumber: batch.batchNumber ?? batch.batchId ?? '',
@@ -484,6 +489,17 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
         extractedText: extractedText,
         selectedFromOptions: matchType != 'manual',
         alternativeMatches: alternativeMatches,
+        // Additional fields for logging
+        salesOrder: currentSession?.salesOrderNumber,
+        purchaseOrder: currentSession?.purchaseOrderNumber,
+        unitId: currentSession?.unitCode,
+        storeId: currentSession?.storeId,
+        rackNum: selectedRackName,
+        locatorInfo: batch.locator ?? widget.selectedItem?.locator,
+        itemName: batch.itemName ?? batch.productName ?? widget.selectedItem?.itemName,
+        requestedQuantity: widget.selectedItem?.quantity,
+        imageBytes: _lastCapturedImageBytes,
+        processingTime: totalProcessingStopwatch.elapsed.inMilliseconds,
       );
       apiSubmissionStopwatch.stop();
       totalProcessingStopwatch.stop();
