@@ -1183,6 +1183,15 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
       }
     }
     
+    // If no matches found, use same fallback strategy as when no text extracted
+    if (allMatches.isEmpty) {
+      _logger.logOcr('TOP5_MATCH_NO_MATCHES: No matches found for extracted text, using fallback strategy');
+      return _getAllBatchesForCardsWithZeroConfidence(
+        batches: batches,
+        sessionDetails: sessionDetails,
+      );
+    }
+    
     // Sort by confidence and take top 5
     allMatches.sort((a, b) => (b['confidence'] as double).compareTo(a['confidence'] as double));
     final top5 = allMatches.take(5).toList();
@@ -1290,7 +1299,7 @@ class OptimizedHospitalOcrService extends ChangeNotifier {
         'itemCode': matchedItemCode,
         'purchaseOrderNumber': purchaseOrderNumber,
         'saleOrderNumber': saleOrderNumber,
-        'noTextExtracted': true, // Flag to show "No Text Extracted" message
+        'fallbackStrategy': true, // Flag to indicate fallback strategy was used
       });
     }
     

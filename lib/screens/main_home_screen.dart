@@ -7,6 +7,7 @@ import '../providers/session_provider.dart';
 import '../screens/qr_scanner_screen.dart';
 import '../screens/ocr_scanner_screen.dart';
 import '../screens/log_viewer_screen.dart';
+import '../screens/api_log_viewer_screen.dart';
 import '../screens/settings_screen.dart';
 import '../screens/batch_submission_details_screen.dart';
 import '../utils/app_colors.dart';
@@ -203,6 +204,9 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
                     case 'logs':
                       Navigator.push(context, MaterialPageRoute(builder: (context) => const LogViewerScreen()));
                       break;
+                    case 'api_logs':
+                      Navigator.push(context, MaterialPageRoute(builder: (context) => const ApiLogViewerScreen()));
+                      break;
                     case 'clear_session':
                       if (hasSession) {
                         _clearSession(sessionProvider);
@@ -224,6 +228,14 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
                     child: ListTile(
                       leading: Icon(Icons.receipt_long),
                       title: Text('View Logs'),
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                  const PopupMenuItem<String>(
+                    value: 'api_logs',
+                    child: ListTile(
+                      leading: Icon(Icons.api),
+                      title: Text('API Logs'),
                       contentPadding: EdgeInsets.zero,
                     ),
                   ),
@@ -429,7 +441,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
                               ),
                             ),
                             Text(
-                              '${rack.items.length} items',
+                              '${rack.availableItems.length} available',
                               style: TextStyle(
                                 color: Colors.grey.shade600,
                                 fontSize: 12,
@@ -561,7 +573,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
                               ),
                             ),
                             Text(
-                              '${rack.items.length} items',
+                              '${rack.submittedItems.length} submitted',
                               style: TextStyle(
                                 color: Colors.grey.shade600,
                                 fontSize: 12,

@@ -8,6 +8,8 @@ class SwipeableBatchMatchCards extends StatefulWidget {
   final Function(BatchMatch, int quantity) onSubmit;
   final VoidCallback onRetake;
   final VoidCallback onClose;
+  final String? extractedText;
+  final bool isUsingFallbackStrategy;
 
   const SwipeableBatchMatchCards({
     Key? key,
@@ -15,6 +17,8 @@ class SwipeableBatchMatchCards extends StatefulWidget {
     required this.onSubmit,
     required this.onRetake,
     required this.onClose,
+    this.extractedText,
+    this.isUsingFallbackStrategy = false,
   }) : super(key: key);
 
   @override
@@ -105,6 +109,50 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
                     ],
                   ),
                 ),
+                
+                // Fallback strategy indicator
+                if (widget.isUsingFallbackStrategy) ...[
+                  Container(
+                    margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.orange.shade200),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.info_outline, color: Colors.orange.shade700, size: 20),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Manual Selection Required',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.orange.shade700,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                widget.extractedText?.isEmpty == true 
+                                  ? 'No text detected. Batches sorted by expiry priority.'
+                                  : 'No matching batches found. Batches sorted by expiry priority.',
+                                style: TextStyle(
+                                  color: Colors.orange.shade600,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 
                 // Swipeable cards
                 Expanded(
@@ -257,7 +305,7 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
                   borderRadius: BorderRadius.circular(15),
                 ),
                 child: Text(
-                  '${match.confidence.toStringAsFixed(1)}%',
+                  match.confidence == 0.0 ? 'Manual' : '${match.confidence.toStringAsFixed(1)}%',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 12,
@@ -504,6 +552,7 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
   }
 
   Color _getConfidenceColor(double confidence) {
+    if (confidence == 0.0) return Colors.grey; // Special case for fallback strategy
     if (confidence >= 80) return Colors.green;
     if (confidence >= 60) return Colors.orange;
     return Colors.red;

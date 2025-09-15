@@ -194,12 +194,7 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
         },
       );
 
-      if (matchResults.isEmpty) {
-        // Show extracted text and options when no matches found
-        _showNoMatchesFoundDialog(extractedText);
-        return;
-      }
-
+      // Note: matchResults will never be empty now due to fallback strategy
       // Convert to BatchMatch objects and create batch data map
       final batchMatches = <BatchMatch>[];
       final batchDataMap = <String, Map<String, dynamic>>{};
@@ -273,6 +268,9 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
         ));
       }
 
+      // Check if fallback strategy is being used (all matches have 0% confidence)
+      final isUsingFallbackStrategy = batchMatches.every((match) => match.confidence == 0.0);
+
       // Show swipeable cards in modal bottom sheet
       await showModalBottomSheet(
         context: context,
@@ -280,6 +278,8 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
         backgroundColor: Colors.transparent,
         builder: (context) => SwipeableBatchMatchCards(
           matches: batchMatches,
+          extractedText: extractedText,
+          isUsingFallbackStrategy: isUsingFallbackStrategy,
           onSubmit: (batchMatch, quantity) async {
             Navigator.pop(context); // Close the modal
             await _handleBatchSubmission(batchMatch, quantity, extractedText, batchDataMap);
@@ -1489,82 +1489,6 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
       
       // This would typically use the share package
     }
-  }
-
-  void _showNoMatchesFoundDialog(String extractedText) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      barrierColor: Colors.black, // Completely opaque background to hide camera
-      builder: (context) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(Icons.warning, color: Colors.orange),
-            SizedBox(width: 8),
-            Text('No Matches Found'),
-          ],
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'Failed to match with available batches.',
-                style: TextStyle(fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 12),
-              const Text('Extracted Text:'),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.grey[100],
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.grey[300]!),
-                ),
-                width: double.infinity,
-                child: Text(
-                  extractedText.isNotEmpty ? extractedText : 'No text detected',
-                  style: const TextStyle(
-                    fontFamily: 'monospace',
-                    fontSize: 12,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'Please ensure the batch label is clearly visible and try again.',
-                style: TextStyle(color: Colors.grey),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop(); // Close dialog
-              Navigator.of(context).pop(); // Navigate back to item screen
-            },
-            child: const Text(
-              'Cancel',
-              style: TextStyle(color: Colors.grey),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).pop(); // Close dialog
-              _retakePhoto(); // Retake photo
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Retake'),
-          ),
-        ],
-      ),
-    );
   }
 }
 
