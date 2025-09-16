@@ -113,17 +113,17 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
                 // Fallback strategy indicator
                 if (widget.isUsingFallbackStrategy) ...[
                   Container(
-                    margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    padding: EdgeInsets.all(12),
+                    margin: EdgeInsets.symmetric(horizontal: 16, vertical: 4), // Reduced vertical margin
+                    padding: EdgeInsets.all(8), // Reduced padding
                     decoration: BoxDecoration(
                       color: Colors.orange.shade50,
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(6), // Slightly smaller radius
                       border: Border.all(color: Colors.orange.shade200),
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.info_outline, color: Colors.orange.shade700, size: 20),
-                        SizedBox(width: 8),
+                        Icon(Icons.info_outline, color: Colors.orange.shade700, size: 16), // Reduced icon size
+                        SizedBox(width: 6), // Reduced spacing
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -133,17 +133,17 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
                                 style: TextStyle(
                                   fontWeight: FontWeight.w600,
                                   color: Colors.orange.shade700,
-                                  fontSize: 14,
+                                  fontSize: 12, // Reduced font size
                                 ),
                               ),
-                              SizedBox(height: 4),
+                              SizedBox(height: 2), // Reduced spacing
                               Text(
                                 widget.extractedText?.isEmpty == true 
                                   ? 'No text detected. Batches sorted by expiry priority.'
                                   : 'No matching batches found. Batches sorted by expiry priority.',
                                 style: TextStyle(
                                   color: Colors.orange.shade600,
-                                  fontSize: 12,
+                                  fontSize: 10, // Reduced font size
                                 ),
                               ),
                             ],
@@ -173,7 +173,7 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
                 
                 // Navigation and indicators
                 Container(
-                  padding: EdgeInsets.all(16),
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8), // Reduced vertical padding
                   child: Column(
                     children: [
                       // Navigation buttons for horizontal swiping
@@ -270,10 +270,10 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
     
     return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(
-        16, // Reduced from 20
-        16, // Reduced from 20
-        16, // Reduced from 20
-        keyboardHeight > 0 ? keyboardHeight * 0.2 + 16 : 16, // More compact padding when keyboard is open
+        16, // Left
+        12, // Reduced top padding
+        16, // Right
+        keyboardHeight > 0 ? 8 : 12, // Minimal bottom padding when keyboard is open
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -360,10 +360,10 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
           
           // Quantity input section
           Container(
-            padding: EdgeInsets.all(16), // Reduced from 20
+            padding: EdgeInsets.all(12), // Reduced padding
             decoration: BoxDecoration(
               color: Colors.blue[50],
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(8), // Reduced radius
               border: Border.all(color: Colors.blue[200]!),
             ),
             child: Column(
@@ -372,12 +372,12 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
                 Text(
                   'Enter Quantity to Submit:',
                   style: TextStyle(
-                    fontSize: 14, // Reduced from 16
+                    fontSize: 13, // Reduced font size
                     fontWeight: FontWeight.w600,
                     color: AppColors.textPrimary,
                   ),
                 ),
-                SizedBox(height: 8), // Reduced from 12
+                SizedBox(height: 6), // Reduced spacing
                 TextField(
                   controller: quantityController,
                   focusNode: _quantityFocusNodes[index],
@@ -447,7 +447,7 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
           ),
           
           // Responsive spacing based on keyboard visibility
-          SizedBox(height: keyboardHeight > 0 ? 8 : 16), // Reduced spacing
+          SizedBox(height: keyboardHeight > 0 ? 4 : 8), // Further reduced spacing
           
           // Action buttons
           Row(
@@ -456,18 +456,18 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
                 flex: 2,
                 child: ElevatedButton.icon(
                   onPressed: () => _handleSubmit(match, quantityController),
-                  icon: Icon(Icons.check_circle_outline, color: Colors.white, size: 18), // Smaller icon
+                  icon: Icon(Icons.check_circle_outline, color: Colors.white, size: 16), // Smaller icon
                   label: Text(
                     'Submit',
                     style: TextStyle(
-                      fontSize: 14, // Reduced font size
+                      fontSize: 13, // Reduced font size
                       fontWeight: FontWeight.w600,
                       color: Colors.white,
                     ),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
-                    padding: EdgeInsets.symmetric(vertical: 12), // Reduced padding
+                    padding: EdgeInsets.symmetric(vertical: 10), // Reduced padding
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
@@ -475,21 +475,21 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
                   ),
                 ),
               ),
-              SizedBox(width: 12),
+              SizedBox(width: 8), // Reduced spacing between buttons
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: widget.onRetake,
-                  icon: Icon(Icons.camera_alt_outlined, color: AppColors.primary, size: 18), // Smaller icon
+                  icon: Icon(Icons.camera_alt_outlined, color: AppColors.primary, size: 16), // Smaller icon
                   label: Text(
                     'Retake',
                     style: TextStyle(
-                      fontSize: 14, // Reduced font size
+                      fontSize: 13, // Reduced font size
                       fontWeight: FontWeight.w600,
                       color: AppColors.primary,
                     ),
                   ),
                   style: OutlinedButton.styleFrom(
-                    padding: EdgeInsets.symmetric(vertical: 12), // Reduced padding
+                    padding: EdgeInsets.symmetric(vertical: 10), // Reduced padding
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
