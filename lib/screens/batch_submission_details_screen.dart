@@ -65,7 +65,7 @@ class _BatchSubmissionDetailsScreenState extends State<BatchSubmissionDetailsScr
       title: Text('Batch ${widget.submittedBatch['batchNumber'] ?? 'Details'}'),
       elevation: 0,
       backgroundColor: AppColors.primary,
-      foregroundColor: AppColors.textColor,
+      foregroundColor: Colors.white, // Use white text for primary colored app bar
       actions: [
         IconButton(
           onPressed: _shareDetails,
@@ -121,7 +121,7 @@ class _BatchSubmissionDetailsScreenState extends State<BatchSubmissionDetailsScr
               const SizedBox(height: 8),
               Text(
                 'Error: $e',
-                style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+                style: TextStyle(fontSize: 14, color: Colors.black54),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -256,7 +256,7 @@ class _BatchSubmissionDetailsScreenState extends State<BatchSubmissionDetailsScr
                     children: [
                       Icon(Icons.image_not_supported, color: Colors.grey),
                       SizedBox(height: 8),
-                      Text('No image available', style: TextStyle(color: Colors.grey)),
+                      Text('No image available', style: TextStyle(color: Colors.black54)),
                     ],
                   ),
                 ),
@@ -1016,11 +1016,19 @@ class ComprehensiveSubmissionDetailsScreen extends StatelessWidget {
             width: 130,
             child: Text(
               '$label:',
-              style: const TextStyle(fontWeight: FontWeight.w600),
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                color: Colors.white, // White text for dark backgrounds
+              ),
             ),
           ),
           Expanded(
-            child: SelectableText(value),
+            child: SelectableText(
+              value,
+              style: const TextStyle(
+                color: Colors.white, // White text for dark backgrounds
+              ),
+            ),
           ),
         ],
       ),

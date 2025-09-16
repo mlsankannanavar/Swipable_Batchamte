@@ -450,7 +450,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
                             Text(
                               '${rack.availableItems.length} available',
                               style: TextStyle(
-                                color: hasAvailableItems ? Colors.grey.shade600 : Colors.grey.shade400,
+                                color: hasAvailableItems ? Colors.black54 : Colors.grey.shade400,
                                 fontSize: 12,
                               ),
                             ),
@@ -872,6 +872,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
                             style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
+                              color: Colors.black, // Make item name black for visibility
                             ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
@@ -883,7 +884,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
                             style: TextStyle(
                               fontSize: 16, // Increased from 14
                               fontWeight: FontWeight.w600,
-                              color: Colors.grey.shade700,
+                              color: Colors.black87, // Changed from grey to black87 for visibility
                             ),
                             maxLines: 3, // Allow for 3 lines to show batch and confidence info
                             overflow: TextOverflow.ellipsis,

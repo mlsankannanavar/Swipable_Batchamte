@@ -44,7 +44,7 @@ class ApiCallCardWidget extends StatelessWidget {
                     child: Text(
                       pair.method,
                       style: const TextStyle(
-                        color: Colors.white,
+                        color: Colors.black87,
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
                       ),
@@ -77,7 +77,7 @@ class ApiCallCardWidget extends StatelessWidget {
                       child: Text(
                         pair.statusCode.toString(),
                         style: const TextStyle(
-                          color: Colors.white,
+                          color: Colors.black87,
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
                         ),

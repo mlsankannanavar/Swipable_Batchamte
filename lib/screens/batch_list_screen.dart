@@ -276,9 +276,9 @@ class _BatchListScreenState extends State<BatchListScreen>
               ],
             ),
             const SizedBox(height: 8),
-            Text('Item: ${submittedBatch['itemName'] ?? 'Unknown'}'),
-            Text('Quantity: ${submittedBatch['quantity'] ?? 'Unknown'}'),
-            Text('Submitted: ${submittedBatch['submittedAt'] ?? 'Unknown'}'),
+            Text('Item: ${submittedBatch['itemName'] ?? 'Unknown'}', style: TextStyle(color: Colors.black87)),
+            Text('Quantity: ${submittedBatch['quantity'] ?? 'Unknown'}', style: TextStyle(color: Colors.black87)),
+            Text('Submitted: ${submittedBatch['submittedAt'] ?? 'Unknown'}', style: TextStyle(color: Colors.black87)),
             const SizedBox(height: 12),
             // Action buttons row
             Row(

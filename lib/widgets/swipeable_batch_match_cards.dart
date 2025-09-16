@@ -112,46 +112,6 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
                 
                 // Fallback strategy indicator
                 if (widget.isUsingFallbackStrategy) ...[
-                  Container(
-                    margin: EdgeInsets.symmetric(horizontal: 16, vertical: 4), // Reduced vertical margin
-                    padding: EdgeInsets.all(8), // Reduced padding
-                    decoration: BoxDecoration(
-                      color: Colors.orange.shade50,
-                      borderRadius: BorderRadius.circular(6), // Slightly smaller radius
-                      border: Border.all(color: Colors.orange.shade200),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.info_outline, color: Colors.orange.shade700, size: 16), // Reduced icon size
-                        SizedBox(width: 6), // Reduced spacing
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Manual Selection Required',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.orange,
-                                  fontSize: 12, // Reduced font size
-                                ),
-                              ),
-                              SizedBox(height: 2), // Reduced spacing
-                              Text(
-                                widget.extractedText?.isEmpty == true 
-                                  ? 'No text detected. Batches sorted by expiry priority.'
-                                  : 'No matching batches found. Batches sorted by expiry priority.',
-                                style: const TextStyle(
-                                  color: Colors.orange,
-                                  fontSize: 10, // Reduced font size
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
                 ],
                 
                 // Swipeable cards
@@ -290,7 +250,7 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
                 child: Text(
                   'Rank: ${match.rankDisplay}',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: Colors.black87,
                     fontSize: 12, // Reduced from 14
                     fontWeight: FontWeight.bold,
                   ),
@@ -305,9 +265,9 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
                   borderRadius: BorderRadius.circular(15),
                 ),
                 child: Text(
-                  match.confidence == 0.0 ? 'Manual' : '${match.confidence.toStringAsFixed(1)}%',
+                  match.confidence == 0.0 ? '0%' : '${match.confidence.toStringAsFixed(1)}%',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: Colors.black87,
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
                   ),
@@ -386,6 +346,7 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
                   style: TextStyle(
                     fontSize: 16, // Reduced from 18
                     fontWeight: FontWeight.w600,
+                    color: Colors.black, // Explicit black text for white background
                   ),
                   inputFormatters: [
                     FilteringTextInputFormatter.digitsOnly,
@@ -456,13 +417,13 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
                 flex: 2,
                 child: ElevatedButton.icon(
                   onPressed: () => _handleSubmit(match, quantityController),
-                  icon: Icon(Icons.check_circle_outline, color: Colors.white, size: 16), // Smaller icon
+                  icon: Icon(Icons.check_circle_outline, color: Colors.black87, size: 16), // Smaller icon
                   label: Text(
                     'Submit',
                     style: TextStyle(
                       fontSize: 13, // Reduced font size
                       fontWeight: FontWeight.w600,
-                      color: Colors.white,
+                      color: Colors.black87,
                     ),
                   ),
                   style: ElevatedButton.styleFrom(
@@ -517,7 +478,7 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
-                color: AppColors.textSecondary,
+                color: Colors.black87, // Changed to black87 for better visibility
               ),
             ),
           ),
@@ -527,7 +488,7 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
               style: TextStyle(
                 fontSize: isImportant ? 15 : 14,
                 fontWeight: isImportant ? FontWeight.w700 : FontWeight.w600,
-                color: isImportant ? AppColors.primary : AppColors.textPrimary,
+                color: isImportant ? AppColors.primary : Colors.black87, // Changed to black87 for visibility
               ),
             ),
           ),
