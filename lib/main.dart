@@ -36,24 +36,52 @@ class BatchMateApp extends StatelessWidget {
             debugShowCheckedModeBanner: false,
             theme: ThemeData(
               useMaterial3: true,
-              colorScheme: ColorScheme.fromSeed(
-                seedColor: AppColors.primary,
-                brightness: Brightness.light,
+              brightness: Brightness.light,
+              colorScheme: ColorScheme.light(
+                primary: AppColors.primary,
+                onPrimary: AppColors.textColorLight,
+                secondary: AppColors.secondary,
+                onSecondary: AppColors.textColorLight,
+                surface: AppColors.surfaceLight,
+                onSurface: AppColors.onSurfaceLight,
+                error: AppColors.error,
+                onError: Colors.white,
               ),
-              appBarTheme: const AppBarTheme(
+              scaffoldBackgroundColor: AppColors.backgroundLight,
+              appBarTheme: AppBarTheme(
                 centerTitle: true,
                 elevation: 0,
+                backgroundColor: AppColors.surfaceLight,
+                foregroundColor: AppColors.textColorLight,
                 surfaceTintColor: Colors.transparent,
+                titleTextStyle: TextStyle(
+                  color: AppColors.textColorLight,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               elevatedButtonTheme: ElevatedButtonThemeData(
                 style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.buttonColor,
+                  foregroundColor: AppColors.buttonText,
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
+                  elevation: 2,
                 ),
               ),
               floatingActionButtonTheme: FloatingActionButtonThemeData(
+                backgroundColor: AppColors.accent,
+                foregroundColor: AppColors.buttonText,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              cardTheme: CardThemeData(
+                color: AppColors.cardBackgroundLight,
+                elevation: 4,
+                shadowColor: AppColors.cardShadow,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -61,30 +89,58 @@ class BatchMateApp extends StatelessWidget {
             ),
             darkTheme: ThemeData(
               useMaterial3: true,
-              colorScheme: ColorScheme.fromSeed(
-                seedColor: AppColors.primary,
-                brightness: Brightness.dark,
+              brightness: Brightness.dark,
+              colorScheme: ColorScheme.dark(
+                primary: AppColors.primary,
+                onPrimary: AppColors.textColorDark,
+                secondary: AppColors.secondary,
+                onSecondary: AppColors.textColorDark,
+                surface: AppColors.surfaceDark,
+                onSurface: AppColors.onSurfaceDark,
+                error: AppColors.error,
+                onError: Colors.white,
               ),
-              appBarTheme: const AppBarTheme(
+              scaffoldBackgroundColor: AppColors.backgroundDark,
+              appBarTheme: AppBarTheme(
                 centerTitle: true,
                 elevation: 0,
+                backgroundColor: AppColors.surfaceDark,
+                foregroundColor: AppColors.textColorDark,
                 surfaceTintColor: Colors.transparent,
+                titleTextStyle: TextStyle(
+                  color: AppColors.textColorDark,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               elevatedButtonTheme: ElevatedButtonThemeData(
                 style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.buttonColor,
+                  foregroundColor: AppColors.buttonText,
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
+                  elevation: 4,
                 ),
               ),
               floatingActionButtonTheme: FloatingActionButtonThemeData(
+                backgroundColor: AppColors.accent,
+                foregroundColor: AppColors.buttonText,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              cardTheme: CardThemeData(
+                color: AppColors.cardBackgroundDark,
+                elevation: 6,
+                shadowColor: AppColors.cardShadowDark,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
             ),
-            themeMode: appStateProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
+            themeMode: ThemeMode.dark, // Default to professional dark theme
             home: const SplashScreen(),
           );
         },
