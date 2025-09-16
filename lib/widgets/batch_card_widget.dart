@@ -61,9 +61,9 @@ class BatchCardWidget extends StatelessWidget {
                         const SizedBox(height: 4),
                         Text(
                           'Batch: ${batch.batchId}',
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 12,
-                            color: Colors.grey.shade600,
+                            color: Colors.black87,
                             fontFamily: 'monospace',
                           ),
                         ),
@@ -157,6 +157,7 @@ class BatchCardWidget extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 11,
                 fontFamily: 'monospace',
+                color: Colors.black87,
               ),
             ),
             if (batch.locator != null)
@@ -271,16 +272,16 @@ class BatchCardWidget extends StatelessWidget {
           Icon(
             icon,
             size: 16,
-            color: Colors.grey.shade600,
+            color: Colors.black87,
           ),
           const SizedBox(width: 8),
           SizedBox(
             width: 100,
             child: Text(
               label,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 12,
-                color: Colors.grey.shade700,
+                color: Colors.black87,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -291,6 +292,7 @@ class BatchCardWidget extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
+                color: Colors.black,
               ),
             ),
           ),
@@ -316,10 +318,10 @@ class BatchCardWidget extends StatelessWidget {
         children: [
           Text(
             'Additional Information',
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.bold,
-              color: Colors.grey.shade700,
+              color: Colors.black87,
             ),
           ),
           const SizedBox(height: 4),
@@ -330,6 +332,7 @@ class BatchCardWidget extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 11,
                 fontFamily: 'monospace',
+                color: Colors.black87,
               ),
             ),
           )),
@@ -449,9 +452,9 @@ class BatchStatisticsWidget extends StatelessWidget {
         ),
         Text(
           label,
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 12,
-            color: Colors.grey.shade600,
+            color: Colors.black87,
           ),
         ),
       ],
@@ -488,9 +491,9 @@ class BatchStatisticsWidget extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             title,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 12,
-              color: Colors.grey.shade700,
+              color: Colors.black87,
               fontWeight: FontWeight.w500,
             ),
             textAlign: TextAlign.center,

@@ -94,15 +94,15 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
                     children: [
                       Text(
                         'Match ${_currentIndex + 1} of ${widget.matches.length}',
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 16, // Reduced from 18
                           fontWeight: FontWeight.w600,
-                          color: AppColors.textPrimary,
+                          color: Colors.black87,
                         ),
                       ),
                       IconButton(
                         onPressed: widget.onClose,
-                        icon: Icon(Icons.close, color: AppColors.textSecondary, size: 24), // Reduced from 28
+                        icon: Icon(Icons.close, color: Colors.black87, size: 24), // Reduced from 28
                         padding: EdgeInsets.all(4), // More compact
                         constraints: BoxConstraints(), // Remove default constraints
                       ),
@@ -130,9 +130,9 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
                             children: [
                               Text(
                                 'Manual Selection Required',
-                                style: TextStyle(
+                                style: const TextStyle(
                                   fontWeight: FontWeight.w600,
-                                  color: Colors.orange.shade700,
+                                  color: Colors.orange,
                                   fontSize: 12, // Reduced font size
                                 ),
                               ),
@@ -141,8 +141,8 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
                                 widget.extractedText?.isEmpty == true 
                                   ? 'No text detected. Batches sorted by expiry priority.'
                                   : 'No matching batches found. Batches sorted by expiry priority.',
-                                style: TextStyle(
-                                  color: Colors.orange.shade600,
+                                style: const TextStyle(
+                                  color: Colors.orange,
                                   fontSize: 10, // Reduced font size
                                 ),
                               ),

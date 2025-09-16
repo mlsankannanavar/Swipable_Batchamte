@@ -173,13 +173,15 @@ class _LogViewerScreenState extends State<LogViewerScreen>
               padding: const EdgeInsets.all(8),
               child: TextField(
                 controller: _searchController,
+                style: const TextStyle(color: Colors.black87),
                 decoration: InputDecoration(
                   hintText: 'Search logs...',
-                  prefixIcon: const Icon(Icons.search),
+                  hintStyle: const TextStyle(color: Colors.grey),
+                  prefixIcon: const Icon(Icons.search, color: Colors.black87),
                   suffixIcon: _searchController.text.isNotEmpty
                       ? IconButton(
                           onPressed: _clearSearch,
-                          icon: const Icon(Icons.clear),
+                          icon: const Icon(Icons.clear, color: Colors.black87),
                         )
                       : null,
                   border: OutlineInputBorder(

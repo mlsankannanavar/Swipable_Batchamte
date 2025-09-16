@@ -59,6 +59,7 @@ class ApiCallCardWidget extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
+                        color: Colors.black87,
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -95,14 +96,14 @@ class ApiCallCardWidget extends StatelessWidget {
                   Icon(
                     Icons.access_time,
                     size: 16,
-                    color: Colors.grey.shade600,
+                    color: Colors.black87,
                   ),
                   const SizedBox(width: 4),
                   Text(
                     _formatTimestamp(pair.timestamp),
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 12,
-                      color: Colors.grey.shade600,
+                      color: Colors.black87,
                     ),
                   ),
                   
@@ -112,14 +113,14 @@ class ApiCallCardWidget extends StatelessWidget {
                     Icon(
                       Icons.timer_outlined,
                       size: 16,
-                      color: Colors.grey.shade600,
+                      color: Colors.black87,
                     ),
                     const SizedBox(width: 4),
                     Text(
                       '${pair.duration!.inMilliseconds}ms',
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 12,
-                        color: Colors.grey.shade600,
+                        color: Colors.black87,
                       ),
                     ),
                   ],
@@ -144,9 +145,9 @@ class ApiCallCardWidget extends StatelessWidget {
                     const SizedBox(width: 4),
                     Text(
                       'Request',
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 11,
-                        color: Colors.blue.shade600,
+                        color: Colors.blue,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -194,9 +195,9 @@ class ApiCallCardWidget extends StatelessWidget {
           const SizedBox(width: 4),
           Text(
             'Pending',
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 12,
-              color: Colors.orange.shade600,
+              color: Colors.orange,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -217,7 +218,7 @@ class ApiCallCardWidget extends StatelessWidget {
           pair.isSuccess ? 'Success' : 'Error',
           style: TextStyle(
             fontSize: 12,
-            color: _getStatusColor(),
+            color: pair.isSuccess ? Colors.green : Colors.red,
             fontWeight: FontWeight.w500,
           ),
         ),
