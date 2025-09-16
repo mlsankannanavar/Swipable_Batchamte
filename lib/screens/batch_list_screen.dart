@@ -76,8 +76,8 @@ class _BatchListScreenState extends State<BatchListScreen>
       bottom: TabBar(
         controller: _tabController,
         indicatorColor: AppColors.secondary,
-        labelColor: AppColors.textColor,
-        unselectedLabelColor: Colors.black54,
+        labelColor: Colors.white, // Selected tab should be white
+        unselectedLabelColor: Colors.black54, // Unselected tab should be grey
         tabs: const [
           Tab(text: 'Available Batches'),
           Tab(text: 'Scanned/Submitted'),

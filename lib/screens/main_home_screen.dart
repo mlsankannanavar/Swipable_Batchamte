@@ -166,7 +166,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
                 Text(
                   'BatchMate',
                   style: TextStyle(
-                    color: AppColors.primary,
+                    color: Colors.white,
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
                   ),

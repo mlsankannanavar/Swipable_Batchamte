@@ -91,7 +91,7 @@ class AppColors {
   static const Color connecting = Color(0xFFF59E0B); // Professional amber
   
   // Card colors - Professional theme
-  static const Color cardBackground = Color(0xFF334155); // Slate card background
+  static const Color cardBackground = Color(0xFFFFFFFF); // White card background for consistency
   static const Color cardShadow = Color(0x40000000); // Darker shadow for professional look
   static const Color cardShadowDark = Color(0x60000000); // Even darker shadow for dark theme
   
