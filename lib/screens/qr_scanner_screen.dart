@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:provider/provider.dart';
+import 'dart:async';
 import '../providers/session_provider.dart';
 import '../providers/logging_provider.dart';
 import '../widgets/loading_widget.dart';
@@ -421,6 +422,9 @@ class _QRScannerScreenState extends State<QRScannerScreen>
       
       loggingProvider.logApp('Extracted session ID: $sessionId');
       
+      // Clear previous session logs before loading new session
+      loggingProvider.clearLogs();
+      
       // Load session data including racks and items
       await sessionProvider.loadSession(sessionId);
       
@@ -570,29 +574,34 @@ class _QRScannerScreenState extends State<QRScannerScreen>
                     ],
                   ),
                 ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Automatically proceeding...',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
               ],
             ),
-            actions: [
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.of(context).pop(); // Close dialog
-                  // Navigate to main home screen and clear the entire navigation stack
-                  Navigator.of(context).pushAndRemoveUntil(
-                    MaterialPageRoute(builder: (context) => const MainHomeScreen()),
-                    (route) => false,
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                ),
-                child: const Text('Continue to Home'),
-              ),
-            ],
+            // Removed actions to make it truly automatic
           );
         },
       ),
     );
+
+    // Automatically close dialog and navigate after 1.5 seconds
+    Timer(const Duration(milliseconds: 1500), () {
+      if (context.mounted) {
+        Navigator.of(context).pop(); // Close dialog
+        // Navigate to main home screen and clear the entire navigation stack
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const MainHomeScreen()),
+          (route) => false,
+        );
+      }
+    });
   }
 
   void _showErrorDialog(String error) {

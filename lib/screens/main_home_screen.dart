@@ -88,7 +88,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Clear Session'),
-          content: const Text('Are you sure you want to clear the current session? This will remove all session data, submitted batches, and return to QR scanner.'),
+          content: const Text('Are you sure you want to clear the current session? This will remove all session data, submitted batches, logs, and return to QR scanner.'),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
@@ -96,10 +96,13 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
             ),
             TextButton(
               onPressed: () async {
-                // Clear both session and batch data completely
+                // Clear session, batch data, and logs completely
                 final batchProvider = Provider.of<BatchProvider>(context, listen: false);
+                final loggingProvider = Provider.of<LoggingProvider>(context, listen: false);
+                
                 await sessionProvider.clearSession();
                 await batchProvider.clearSession();
+                loggingProvider.clearLogs(); // Clear all logs when session is cleared
                 
                 Navigator.of(context).pop();
                 setState(() {
@@ -422,12 +425,15 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
                 final sortedRacks = session.racks.toList()
                   ..sort((a, b) => _compareLocators(a.rackName, b.rackName));
                 return sortedRacks.map((rack) {
+                  final hasAvailableItems = rack.availableItems.length > 0;
                   return DropdownMenuItem<String>(
                     value: rack.rackName,
+                    enabled: hasAvailableItems, // Disable if no available items
                     child: Row(
                       children: [
                         Icon(Icons.inventory_2, 
-                            color: AppColors.primary, size: 20),
+                            color: hasAvailableItems ? AppColors.primary : Colors.grey.shade400, 
+                            size: 20),
                         const SizedBox(width: 12),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -435,15 +441,16 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
                           children: [
                             Text(
                               rack.rackName,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontWeight: FontWeight.w600,
                                 fontSize: 16,
+                                color: hasAvailableItems ? Colors.black : Colors.grey.shade400,
                               ),
                             ),
                             Text(
                               '${rack.availableItems.length} available',
                               style: TextStyle(
-                                color: Colors.grey.shade600,
+                                color: hasAvailableItems ? Colors.grey.shade600 : Colors.grey.shade400,
                                 fontSize: 12,
                               ),
                             ),
@@ -554,12 +561,15 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
                 final sortedRacks = session.racks.toList()
                   ..sort((a, b) => _compareLocators(a.rackName, b.rackName));
                 return sortedRacks.map((rack) {
+                  final hasSubmittedItems = rack.submittedItems.length > 0;
                   return DropdownMenuItem<String>(
                     value: rack.rackName,
+                    enabled: hasSubmittedItems, // Disable if no submitted items
                     child: Row(
                       children: [
                         Icon(Icons.inventory_2, 
-                            color: AppColors.primary, size: 20),
+                            color: hasSubmittedItems ? AppColors.primary : Colors.grey.shade400, 
+                            size: 20),
                         const SizedBox(width: 12),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -567,15 +577,16 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
                           children: [
                             Text(
                               rack.rackName,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontWeight: FontWeight.w600,
                                 fontSize: 16,
+                                color: hasSubmittedItems ? Colors.black : Colors.grey.shade400,
                               ),
                             ),
                             Text(
                               '${rack.submittedItems.length} submitted',
                               style: TextStyle(
-                                color: Colors.grey.shade600,
+                                color: hasSubmittedItems ? Colors.grey.shade600 : Colors.grey.shade400,
                                 fontSize: 12,
                               ),
                             ),

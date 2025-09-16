@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:provider/provider.dart';
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -406,23 +407,37 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
           size: 48,
         ),
         title: const Text('Success'),
-        content: Text(message),
-        actions: [
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).pop(); // Close dialog
-              // Return to main screen with success result
-              Navigator.of(context).pop({
-                'success': true,
-                'selectedBatch': _lastSubmittedBatchNumber,
-                'message': message,
-              });
-            },
-            child: const Text('Continue'),
-          ),
-        ],
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(message),
+            const SizedBox(height: 16),
+            const Text(
+              'Automatically proceeding...',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        ),
+        // Removed actions to make it truly automatic
       ),
     );
+
+    // Automatically close dialog and navigate after 1.5 seconds
+    Timer(const Duration(milliseconds: 1500), () {
+      if (context.mounted) {
+        Navigator.of(context).pop(); // Close dialog
+        // Return to main screen with success result
+        Navigator.of(context).pop({
+          'success': true,
+          'selectedBatch': _lastSubmittedBatchNumber,
+          'message': message,
+        });
+      }
+    });
   }
 
   /// Reset scanner for next scan
