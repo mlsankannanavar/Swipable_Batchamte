@@ -960,7 +960,10 @@ class ComprehensiveSubmissionDetailsScreen extends StatelessWidget {
         
         const Text(
           'Request Payload:',
-          style: TextStyle(fontWeight: FontWeight.w600),
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            color: Colors.black87, // Explicit color for labels
+          ),
         ),
         const SizedBox(height: 8),
         _buildJsonContainer(submissionDetail.apiPayload),
@@ -969,7 +972,10 @@ class ComprehensiveSubmissionDetailsScreen extends StatelessWidget {
           const SizedBox(height: 16),
           const Text(
             'API Response:',
-            style: TextStyle(fontWeight: FontWeight.w600),
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              color: Colors.black87, // Explicit color for labels
+            ),
           ),
           const SizedBox(height: 8),
           _buildJsonContainer(submissionDetail.apiResponse!),
@@ -1053,6 +1059,7 @@ class ComprehensiveSubmissionDetailsScreen extends StatelessWidget {
           style: const TextStyle(
             fontFamily: 'monospace',
             fontSize: 10,
+            color: Colors.black, // Explicit black color for JSON text
           ),
         ),
       ),

@@ -339,13 +339,14 @@ class ApiCallDetailsSheet extends StatelessWidget {
                             style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
+                              color: Colors.black87, // Explicit color for headers
                             ),
                           ),
                           Text(
                             pair.timestamp.toString().substring(0, 19),
                             style: TextStyle(
                               fontSize: 12,
-                              color: Colors.grey.shade600,
+                              color: Colors.black54, // Change from grey to black54 for visibility
                             ),
                           ),
                         ],
@@ -408,6 +409,7 @@ class ApiCallDetailsSheet extends StatelessWidget {
           style: const TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
+            color: Colors.black87, // Explicit color for main titles
           ),
         ),
         const SizedBox(height: 12),
@@ -451,6 +453,7 @@ class ApiCallDetailsSheet extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
+                color: Colors.black87, // Explicit color for section titles
               ),
             ),
             const Spacer(),
@@ -479,6 +482,7 @@ class ApiCallDetailsSheet extends StatelessWidget {
             style: const TextStyle(
               fontFamily: 'monospace',
               fontSize: 12,
+              color: Colors.black, // Explicit black color for better visibility
             ),
           ),
         ),
