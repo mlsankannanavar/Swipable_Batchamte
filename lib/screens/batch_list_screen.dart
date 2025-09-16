@@ -77,7 +77,7 @@ class _BatchListScreenState extends State<BatchListScreen>
         controller: _tabController,
         indicatorColor: AppColors.secondary,
         labelColor: AppColors.textColor,
-        unselectedLabelColor: Colors.grey,
+        unselectedLabelColor: Colors.black54,
         tabs: const [
           Tab(text: 'Available Batches'),
           Tab(text: 'Scanned/Submitted'),
@@ -147,7 +147,7 @@ class _BatchListScreenState extends State<BatchListScreen>
         style: const TextStyle(color: Colors.black87),
         decoration: InputDecoration(
           hintText: 'Search batches...',
-          hintStyle: const TextStyle(color: Colors.grey),
+          hintStyle: const TextStyle(color: Colors.black38),
           prefixIcon: const Icon(Icons.search, color: Colors.black87),
           suffixIcon: _searchController.text.isNotEmpty
               ? IconButton(
@@ -326,7 +326,7 @@ class _BatchListScreenState extends State<BatchListScreen>
                     height: double.infinity,
                     errorBuilder: (context, error, stackTrace) {
                       return const Center(
-                        child: Icon(Icons.image_not_supported, color: Colors.grey),
+                        child: Icon(Icons.image_not_supported, color: Colors.black54),
                       );
                     },
                   ),
@@ -347,23 +347,23 @@ class _BatchListScreenState extends State<BatchListScreen>
           Icon(
             Icons.inventory_2_outlined,
             size: 64,
-            color: Colors.grey[400],
+            color: Colors.black54,
           ),
           const SizedBox(height: 16),
           Text(
             'No Available Batches',
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: Colors.grey[600],
+              color: Colors.black87,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             'Scan a QR code to load batches for a session',
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 14,
-              color: Colors.grey[500],
+              color: Colors.black54,
             ),
             textAlign: TextAlign.center,
           ),
@@ -380,23 +380,23 @@ class _BatchListScreenState extends State<BatchListScreen>
           Icon(
             Icons.upload_outlined,
             size: 64,
-            color: Colors.grey[400],
+            color: Colors.black54,
           ),
           const SizedBox(height: 16),
           Text(
             'No Submitted Batches',
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: Colors.grey[600],
+              color: Colors.black87,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             'Start scanning and submitting batches to see them here',
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 14,
-              color: Colors.grey[500],
+              color: Colors.black54,
             ),
             textAlign: TextAlign.center,
           ),
@@ -493,13 +493,13 @@ class _BatchListScreenState extends State<BatchListScreen>
                       Icon(
                         Icons.error_outline,
                         size: 64,
-                        color: Colors.grey[400],
+                        color: Colors.black54,
                       ),
                       const SizedBox(height: 16),
                       Text(
                         'Unable to load image',
-                        style: TextStyle(
-                          color: Colors.grey[400],
+                        style: const TextStyle(
+                          color: Colors.black54,
                           fontSize: 16,
                         ),
                       ),

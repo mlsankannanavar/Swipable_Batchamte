@@ -18,16 +18,16 @@ class AppColors {
   
   // Light theme colors (Professional light mode)
   static const Color backgroundLight = Color(0xFFF8FAFC); // Very light grey
-  static const Color textColorLight = Color(0xFF1F2937); // Dark charcoal text
-  static const Color textSecondaryLight = Color(0xFF6B7280); // Medium grey text
+  static const Color textColorLight = Color(0xFF000000); // Black text for maximum visibility
+  static const Color textSecondaryLight = Color(0xDE000000); // Black87 for secondary text visibility
   static const Color surfaceLight = Color(0xFFFFFFFF); // Pure white
-  static const Color onSurfaceLight = Color(0xFF1F2937); // Dark charcoal
+  static const Color onSurfaceLight = Color(0xFF000000); // Black text on white surface
   static const Color cardBackgroundLight = Color(0xFFFFFFFF); // Pure white
   
   // Dark theme colors (Professional dark mode - default)
   static const Color backgroundDark = Color(0xFF0F172A); // Deep slate background
-  static const Color textColorDark = Color(0xFFF1F5F9); // Light slate text
-  static const Color textSecondaryDark = Color(0xFF94A3B8); // Medium slate text
+  static const Color textColorDark = Color(0xFFFFFFFF); // Pure white text for dark theme
+  static const Color textSecondaryDark = Color(0xFFFFFFFF); // White secondary text for dark theme
   static const Color surfaceDark = Color(0xFF1E293B); // Dark slate surface
   static const Color onSurfaceDark = Color(0xFFF1F5F9); // Light slate
   static const Color cardBackgroundDark = Color(0xFF334155); // Slate card background
@@ -53,9 +53,9 @@ class AppColors {
   static Color getCardBackgroundColor(bool isDark) => isDark ? cardBackgroundDark : cardBackgroundLight;
   
   // Legacy colors for backward compatibility
-  static const Color background = backgroundDark; // Default to dark theme
-  static const Color textColor = textColorDark; // Default to dark theme
-  static const Color textSecondary = textSecondaryDark; // Default to dark theme
+  static const Color background = backgroundLight; // Default to light theme for better visibility
+  static const Color textColor = textColorLight; // Default to black text
+  static const Color textSecondary = textSecondaryLight; // Default to black87 secondary text
   
   // Button colors - Professional theme
   static const Color buttonColor = Color(0xFF3B82F6); // Professional blue buttons
@@ -82,8 +82,8 @@ class AppColors {
   
   // Surface colors - Professional theme
   static const Color surface = Color(0xFF1E293B); // Dark slate surface
-  static const Color onSurface = Color(0xFFF1F5F9); // Light slate text
-  static const Color onSurfaceVariant = Color(0xFF94A3B8); // Medium slate text
+  static const Color onSurface = Color(0xFF000000); // Black text on light surfaces
+  static const Color onSurfaceVariant = Color(0x8A000000); // Black54 for variant text
   
   // Status colors - Professional theme
   static const Color connected = Color(0xFF10B981); // Professional green
@@ -102,8 +102,8 @@ class AppColors {
   static const Color buttonDisabled = Color(0xFF64748B); // Medium slate for disabled
   
   // Text colors - Professional theme
-  static const Color textPrimary = Color(0xFFF1F5F9); // Light slate primary text
-  static const Color textHint = Color(0xFF64748B); // Medium slate hint text
+  static const Color textPrimary = Color(0xFF000000); // Black primary text for visibility
+  static const Color textHint = Color(0x61000000); // Black38 for hint text (lighter but still visible)
   
   // Border colors - Professional theme
   static const Color border = Color(0xFF475569); // Slate border

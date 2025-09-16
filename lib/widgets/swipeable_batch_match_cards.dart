@@ -196,7 +196,7 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
                                 size: 30,
                                 color: _currentIndex > 0 
                                   ? AppColors.primary 
-                                  : Colors.grey[400],
+                                  : Colors.black54,
                               ),
                             ),
                             
@@ -213,7 +213,7 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
                                     shape: BoxShape.circle,
                                     color: index == _currentIndex 
                                       ? AppColors.primary 
-                                      : Colors.grey[300],
+                                      : Colors.black26,
                                   ),
                                 ),
                               ),
@@ -234,7 +234,7 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
                                 size: 30,
                                 color: _currentIndex < widget.matches.length - 1
                                   ? AppColors.primary 
-                                  : Colors.grey[400],
+                                  : Colors.black54,
                               ),
                             ),
                           ],
@@ -547,12 +547,12 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
       case 4:
         return Colors.purple;
       default:
-        return Colors.grey;
+        return Colors.black54;
     }
   }
 
   Color _getConfidenceColor(double confidence) {
-    if (confidence == 0.0) return Colors.grey; // Special case for fallback strategy
+    if (confidence == 0.0) return Colors.black54; // Special case for fallback strategy
     if (confidence >= 80) return Colors.green;
     if (confidence >= 60) return Colors.orange;
     return Colors.red;

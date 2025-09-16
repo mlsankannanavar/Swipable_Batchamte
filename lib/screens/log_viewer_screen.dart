@@ -176,7 +176,7 @@ class _LogViewerScreenState extends State<LogViewerScreen>
                 style: const TextStyle(color: Colors.black87),
                 decoration: InputDecoration(
                   hintText: 'Search logs...',
-                  hintStyle: const TextStyle(color: Colors.grey),
+                  hintStyle: const TextStyle(color: Colors.black38),
                   prefixIcon: const Icon(Icons.search, color: Colors.black87),
                   suffixIcon: _searchController.text.isNotEmpty
                       ? IconButton(
@@ -256,7 +256,7 @@ class _LogViewerScreenState extends State<LogViewerScreen>
                     controller: _tabController,
                     isScrollable: true,
                     labelColor: AppColors.primary,
-                    unselectedLabelColor: Colors.grey,
+                    unselectedLabelColor: Colors.black54,
                     indicatorSize: TabBarIndicatorSize.label,
                     tabs: const [
                       Tab(text: 'Logs'),
@@ -323,22 +323,22 @@ class _LogViewerScreenState extends State<LogViewerScreen>
                 Icon(
                   Icons.terminal,
                   size: 64,
-                  color: Colors.grey,
+                  color: Colors.black54,
                 ),
                 SizedBox(height: 16),
                 Text(
                   'No logs available',
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: Colors.grey,
+                    color: Colors.black87,
                   ),
                 ),
                 SizedBox(height: 8),
                 Text(
                   'Logs will appear here as you use the app',
-                  style: TextStyle(
-                    color: Colors.grey,
+                  style: const TextStyle(
+                    color: Colors.black54,
                   ),
                 ),
               ],
@@ -491,7 +491,7 @@ class _LogViewerScreenState extends State<LogViewerScreen>
             if (recentLogs.isEmpty)
               const Text(
                 'No recent activity',
-                style: TextStyle(color: Colors.grey),
+                style: TextStyle(color: Colors.black54),
               )
             else
               ...recentLogs.take(5).map((log) => ListTile(
@@ -682,7 +682,7 @@ class _LogViewerScreenState extends State<LogViewerScreen>
       case 'NETWORK':
         return Colors.orange.shade700;
       default:
-        return Colors.grey.shade700;
+        return Colors.black54;
     }
   }
 }

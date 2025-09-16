@@ -103,7 +103,7 @@ class _LogEntryWidgetState extends State<LogEntryWidget>
             style: const TextStyle(
               fontSize: 11,
               fontFamily: 'monospace',
-              color: Colors.grey,
+              color: Colors.black54,
             ),
           ),
         ),
@@ -150,7 +150,7 @@ class _LogEntryWidgetState extends State<LogEntryWidget>
         Icon(
           _isExpanded ? Icons.expand_less : Icons.expand_more,
           size: 16,
-          color: Colors.grey,
+          color: Colors.black54,
         ),
       ],
     );

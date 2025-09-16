@@ -239,7 +239,7 @@ class ApiCallCardWidget extends StatelessWidget {
       case 'PATCH':
         return Colors.purple;
       default:
-        return Colors.grey;
+        return Colors.black54;
     }
   }
 
