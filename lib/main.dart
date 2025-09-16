@@ -78,14 +78,6 @@ class BatchMateApp extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              cardTheme: const CardThemeData(
-                color: AppColors.cardBackgroundLight,
-                elevation: 4,
-                shadowColor: AppColors.cardShadow,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(12)),
-                ),
-              ),
             ),
             darkTheme: ThemeData(
               useMaterial3: true,
@@ -129,14 +121,6 @@ class BatchMateApp extends StatelessWidget {
                 foregroundColor: AppColors.buttonText,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              cardTheme: const CardThemeData(
-                color: AppColors.cardBackgroundDark,
-                elevation: 6,
-                shadowColor: AppColors.cardShadowDark,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(12)),
                 ),
               ),
             ),
