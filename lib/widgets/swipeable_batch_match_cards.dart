@@ -261,13 +261,24 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: _getConfidenceColor(match.confidence),
+                  color: Colors.white, // White background as requested
+                  border: Border.all(
+                    color: _getConfidenceColor(match.confidence),
+                    width: 2,
+                  ),
                   borderRadius: BorderRadius.circular(15),
+                  boxShadow: [
+                    BoxShadow(
+                      color: _getConfidenceColor(match.confidence).withOpacity(0.2),
+                      blurRadius: 4,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
                 ),
                 child: Text(
                   match.confidence == 0.0 ? '0%' : '${match.confidence.toStringAsFixed(1)}%',
                   style: TextStyle(
-                    color: Colors.black87,
+                    color: _getConfidenceColor(match.confidence), // Colored text
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
                   ),
@@ -513,10 +524,12 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
   }
 
   Color _getConfidenceColor(double confidence) {
-    if (confidence == 0.0) return Colors.black54; // Special case for fallback strategy
-    if (confidence >= 80) return Colors.green;
-    if (confidence >= 60) return Colors.orange;
-    return Colors.red;
+    if (confidence == 0.0) return Colors.red; // Red for 0%
+    if (confidence >= 85) return Colors.green; // Green for 85% and above
+    if (confidence >= 70) return Colors.orange; // Orange for 70-84%
+    if (confidence >= 50) return Colors.amber; // Amber for 50-69%
+    if (confidence >= 30) return Colors.deepOrange; // Deep orange for 30-49%
+    return Colors.red; // Red for below 30%
   }
 
   void _handleSubmit(BatchMatch match, TextEditingController controller) {

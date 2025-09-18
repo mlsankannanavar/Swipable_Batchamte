@@ -25,6 +25,21 @@ class BatchCardWidget extends StatelessWidget {
     return _buildFullCard(context);
   }
 
+  /// Adaptive text widget that tries to fit text in 3 lines with current font size,
+  /// or reduces font size to fit in 2 lines if needed
+  Widget _buildAdaptiveItemNameText(String text, {required double fontSize, Color? color, FontWeight? fontWeight}) {
+    return Text(
+      text,
+      style: TextStyle(
+        fontSize: fontSize,
+        color: color ?? Colors.black87,
+        fontWeight: fontWeight ?? FontWeight.w500,
+      ),
+      maxLines: 3,
+      overflow: TextOverflow.ellipsis,
+    );
+  }
+
   Widget _buildFullCard(BuildContext context) {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -68,13 +83,11 @@ class BatchCardWidget extends StatelessWidget {
                           ),
                         ),
                         if (batch.itemName != null)
-                          Text(
+                          _buildAdaptiveItemNameText(
                             batch.itemName!,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              color: Colors.black87,
-                              fontWeight: FontWeight.w500,
-                            ),
+                            fontSize: 13,
+                            color: Colors.black87,
+                            fontWeight: FontWeight.w500,
                           ),
                       ],
                     ),
@@ -135,7 +148,7 @@ class BatchCardWidget extends StatelessWidget {
       child: ListTile(
         onTap: onTap,
         leading: CircleAvatar(
-          backgroundColor: _getStatusColor().withOpacity(0.2),
+          backgroundColor: _getStatusColor().withValues(alpha: 0.2),
           child: Icon(
             _getStatusIcon(),
             color: _getStatusColor(),

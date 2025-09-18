@@ -950,39 +950,110 @@ class _OCRScannerScreenState extends State<OCRScannerScreen>
                 bottomRight: Radius.circular(12),
               ),
             ),
-            child: Column(
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Icon(Icons.medical_services, color: Colors.white, size: 18),
-                    const SizedBox(width: 8),
-                    const Text(
-                      'Scanning for:',
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 14,
+                // Left side - Item info
+                Expanded(
+                  flex: 3,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.medical_services, color: Colors.white, size: 18),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'Scanning for:',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  widget.selectedItem!.itemName,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                      const SizedBox(height: 4),
+                      Text(
+                        widget.selectedItem!.itemName,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      if (widget.selectedItem!.batches.isNotEmpty)
+                        Text(
+                          '${widget.selectedItem!.batches.length} batches available',
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 12,
+                          ),
+                        ),
+                    ],
                   ),
                 ),
-                if (widget.selectedItem!.batches.isNotEmpty)
-                  Text(
-                    '${widget.selectedItem!.batches.length} batches available',
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 12,
-                    ),
+                // Right side - Single quantity info
+                Expanded(
+                  flex: 2,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      // Single quantity display based on submission status
+                      Builder(
+                        builder: (context) {
+                          final item = widget.selectedItem!;
+                          
+                          // Determine what to show and color
+                          String quantityText;
+                          Color textColor;
+                          
+                          if (item.submittedQuantity == 0) {
+                            // Nothing submitted - show requested
+                            quantityText = 'Requested: ${item.quantity}';
+                            textColor = Colors.white;
+                          } else if (item.submittedQuantity < item.quantity) {
+                            // Partially submitted - show remaining
+                            quantityText = 'Remaining: ${item.remainingQuantity}';
+                            textColor = Colors.orange;
+                          } else {
+                            // Fully submitted - show completed
+                            quantityText = 'Completed: ${item.quantity}';
+                            textColor = Colors.green;
+                          }
+                          
+                          return Text(
+                            quantityText,
+                            style: TextStyle(
+                              color: textColor,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          );
+                        },
+                      ),
+                      // Show partial indicator only if partially submitted
+                      if (widget.selectedItem!.submittedQuantity > 0 && 
+                          widget.selectedItem!.submittedQuantity < widget.selectedItem!.quantity)
+                        Container(
+                          margin: const EdgeInsets.only(top: 4),
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.withOpacity(0.3),
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: Colors.orange, width: 1),
+                          ),
+                          child: const Text(
+                            'PARTIAL',
+                            style: TextStyle(
+                              color: Colors.orange,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
+                ),
               ],
             ),
           ),

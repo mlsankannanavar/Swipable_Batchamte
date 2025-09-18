@@ -84,18 +84,7 @@ class _BatchSubmissionDetailsScreenState extends State<BatchSubmissionDetailsScr
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildHeader(),
-            const SizedBox(height: 24),
-            _buildCapturedImage(),
-            const SizedBox(height: 24),
-            _buildExtractionDetails(),
-            const SizedBox(height: 24),
-            _buildMatchingDetails(),
-            const SizedBox(height: 24),
-            _buildSubmissionDetails(),
-            const SizedBox(height: 24),
-            _buildTimingDetails(),
-            const SizedBox(height: 24),
-            _buildApiDetails(),
+            // Removed other sections - they will be shown through "More Details" button
           ],
         ),
       );
@@ -121,7 +110,7 @@ class _BatchSubmissionDetailsScreenState extends State<BatchSubmissionDetailsScr
               const SizedBox(height: 8),
               Text(
                 'Error: $e',
-                style: TextStyle(fontSize: 14, color: Colors.black54),
+                style: TextStyle(fontSize: 14, color: Colors.black),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -187,7 +176,7 @@ class _BatchSubmissionDetailsScreenState extends State<BatchSubmissionDetailsScr
           children: [
             const Text(
               'Captured Image',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black),
             ),
             const SizedBox(height: 12),
             if (widget.submittedBatch['capturedImage'] != null) ...[
@@ -256,7 +245,7 @@ class _BatchSubmissionDetailsScreenState extends State<BatchSubmissionDetailsScr
                     children: [
                       Icon(Icons.image_not_supported, color: Colors.grey),
                       SizedBox(height: 8),
-                      Text('No image available', style: TextStyle(color: Colors.black54)),
+                      Text('No image available', style: TextStyle(color: Colors.black)),
                     ],
                   ),
                 ),
@@ -281,7 +270,7 @@ class _BatchSubmissionDetailsScreenState extends State<BatchSubmissionDetailsScr
                 const SizedBox(width: 8),
                 const Text(
                   'OCR Extraction Details',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black),
                 ),
               ],
             ),
@@ -461,13 +450,13 @@ class _BatchSubmissionDetailsScreenState extends State<BatchSubmissionDetailsScr
             width: 120,
             child: Text(
               '$label:',
-              style: const TextStyle(fontWeight: FontWeight.w500),
+              style: const TextStyle(fontWeight: FontWeight.w500, color: Colors.black),
             ),
           ),
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(color: Colors.black87),
+              style: const TextStyle(color: Colors.black),
             ),
           ),
         ],
@@ -477,7 +466,7 @@ class _BatchSubmissionDetailsScreenState extends State<BatchSubmissionDetailsScr
 
   Widget _buildTimingRow(String label, dynamic duration, {bool isTotal = false}) {
     final durationMs = duration is int ? duration : (duration is String ? int.tryParse(duration) ?? 0 : 0);
-    final color = isTotal ? AppColors.primary : Colors.black87;
+    final color = isTotal ? AppColors.primary : Colors.black;
     final fontWeight = isTotal ? FontWeight.bold : FontWeight.normal;
     
     return Padding(
@@ -900,7 +889,7 @@ class ComprehensiveSubmissionDetailsScreen extends StatelessWidget {
         const SizedBox(height: 12),
         const Text(
           'Extracted Text:',
-          style: TextStyle(fontWeight: FontWeight.w600),
+          style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black),
         ),
         const SizedBox(height: 8),
         Container(
@@ -918,6 +907,7 @@ class ComprehensiveSubmissionDetailsScreen extends StatelessWidget {
             style: const TextStyle(
               fontFamily: 'monospace',
               fontSize: 12,
+              color: Colors.black,
             ),
           ),
         ),
