@@ -476,7 +476,7 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
             child: Text(
               label,
               style: TextStyle(
-                fontSize: 14,
+                fontSize: 15, // Increased from 14 to 15
                 fontWeight: FontWeight.w500,
                 color: Colors.black87, // Changed to black87 for better visibility
               ),
@@ -486,7 +486,7 @@ class _SwipeableBatchMatchCardsState extends State<SwipeableBatchMatchCards> {
             child: Text(
               value,
               style: TextStyle(
-                fontSize: isImportant ? 15 : 14,
+                fontSize: isImportant ? 16 : 15, // Increased from 15:14 to 16:15
                 fontWeight: isImportant ? FontWeight.w700 : FontWeight.w600,
                 color: isImportant ? AppColors.primary : Colors.black87, // Changed to black87 for visibility
               ),

@@ -1109,7 +1109,7 @@ class ComprehensiveSubmissionDetailsScreen extends StatelessWidget {
   }
 
   void _shareDetails(BuildContext context) {
-    final summary = '''
+    final details = '''
 Batch Submission Details
 ========================
 Batch: ${submissionDetail.batchNumber}
@@ -1118,8 +1118,13 @@ Status: ${submissionDetail.submissionStatus}
 Submitted: ${submissionDetail.formattedSubmissionTime}
 Quantity: ${submissionDetail.submittedQuantity}
 Confidence: ${submissionDetail.ocrConfidence}%
+
+API Submission Details:
+${submissionDetail.apiResponse}
+
+OCR Extracted Text: ${submissionDetail.extractedText}
 Processing Time: ${submissionDetail.totalProcessingTimeMs}ms
-    ''';
+''';
     
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(

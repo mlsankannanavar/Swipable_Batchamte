@@ -271,7 +271,7 @@ class BatchProvider extends ChangeNotifier {
       for (final data in cachedData) {
         try {
           // Skip if data is not a Map (could be List from submitted batches)
-          if (data is! Map) continue;
+          if (data is! Map<String, dynamic>) continue;
           
           final sessionData = Map<String, dynamic>.from(data);
           

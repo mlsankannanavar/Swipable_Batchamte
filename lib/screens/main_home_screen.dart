@@ -586,7 +586,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
                             Text(
                               '${rack.submittedItems.length} submitted',
                               style: TextStyle(
-                                color: hasSubmittedItems ? Colors.grey.shade600 : Colors.grey.shade400,
+                                color: hasSubmittedItems ? Colors.black54 : Colors.grey.shade400, // Changed to black54 for consistency
                                 fontSize: 12,
                               ),
                             ),
@@ -604,6 +604,9 @@ class _MainHomeScreenState extends State<MainHomeScreen> with SingleTickerProvid
                   });
                 }
               },
+              dropdownColor: Colors.white, // Add white dropdown background like Available Items
+              borderRadius: BorderRadius.circular(12.0),
+              elevation: 8,
             ),
           ),
         ),

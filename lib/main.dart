@@ -160,7 +160,7 @@ class BatchMateApp extends StatelessWidget {
                 ),
               ),
             ),
-            themeMode: ThemeMode.dark, // Default to professional dark theme
+            themeMode: ThemeMode.light, // Force light theme always for better visibility
             home: const SplashScreen(),
           );
         },
