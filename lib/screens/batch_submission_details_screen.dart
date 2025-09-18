@@ -84,7 +84,44 @@ class _BatchSubmissionDetailsScreenState extends State<BatchSubmissionDetailsScr
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildHeader(),
-            // Removed other sections - they will be shown through "More Details" button
+            const SizedBox(height: 16),
+            
+            // Show all sections directly if they have data
+            if (widget.submittedBatch['ocrExtractionDetails'] != null ||
+                widget.submittedBatch['batchMatchingDetails'] != null ||
+                widget.submittedBatch['performanceMetrics'] != null ||
+                widget.submittedBatch['apiCommunicationDetails'] != null) ...[
+              
+              // OCR Extraction Details
+              if (widget.submittedBatch['ocrExtractionDetails'] != null) ...[
+                _buildExtractionDetails(),
+                const SizedBox(height: 16),
+              ],
+              
+              // Batch Matching Details
+              if (widget.submittedBatch['batchMatchingDetails'] != null) ...[
+                _buildMatchingDetails(),
+                const SizedBox(height: 16),
+              ],
+              
+              // Performance Metrics
+              if (widget.submittedBatch['performanceMetrics'] != null) ...[
+                _buildTimingDetails(),
+                const SizedBox(height: 16),
+              ],
+              
+              // API Communication Details
+              if (widget.submittedBatch['apiCommunicationDetails'] != null) ...[
+                _buildApiDetails(),
+                const SizedBox(height: 16),
+              ],
+              
+              // Captured Image
+              if (widget.submittedBatch['capturedImage'] != null) ...[
+                _buildCapturedImage(),
+                const SizedBox(height: 16),
+              ],
+            ],
           ],
         ),
       );
@@ -616,9 +653,18 @@ class _BatchSubmissionDetailsScreenState extends State<BatchSubmissionDetailsScr
   void _showComprehensiveDetails() {
     final submissionDetailData = widget.submittedBatch['submissionDetail'] as Map<String, dynamic>?;
     
+    // Debug: Print what data is available
+    print('DEBUG: Available keys in submittedBatch: ${widget.submittedBatch.keys.toList()}');
+    print('DEBUG: submissionDetail exists: ${widget.submittedBatch.containsKey('submissionDetail')}');
+    print('DEBUG: submissionDetail value: $submissionDetailData');
+    
     if (submissionDetailData == null) {
+      // Show detailed error message with available data
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Detailed data not available for this submission')),
+        SnackBar(
+          content: Text('Detailed data not available. Available keys: ${widget.submittedBatch.keys.join(', ')}'),
+          duration: const Duration(seconds: 5),
+        ),
       );
       return;
     }
@@ -633,9 +679,14 @@ class _BatchSubmissionDetailsScreenState extends State<BatchSubmissionDetailsScr
           ),
         ),
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('DEBUG: Error parsing submissionDetail: $e');
+      print('DEBUG: Stack trace: $stackTrace');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error loading detailed data: $e')),
+        SnackBar(
+          content: Text('Error loading detailed data: $e'),
+          duration: const Duration(seconds: 5),
+        ),
       );
     }
   }
