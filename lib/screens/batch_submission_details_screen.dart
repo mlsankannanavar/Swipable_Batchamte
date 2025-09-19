@@ -1065,7 +1065,7 @@ class ComprehensiveSubmissionDetailsScreen extends StatelessWidget {
               '$label:',
               style: const TextStyle(
                 fontWeight: FontWeight.w600,
-                color: Colors.white, // White text for dark backgrounds
+                color: Colors.black87, // Black text for visibility
               ),
             ),
           ),
@@ -1073,7 +1073,7 @@ class ComprehensiveSubmissionDetailsScreen extends StatelessWidget {
             child: SelectableText(
               value,
               style: const TextStyle(
-                color: Colors.white, // White text for dark backgrounds
+                color: Colors.black87, // Black text for visibility
               ),
             ),
           ),
